@@ -17,6 +17,13 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# Windows IAR
+Exe/
+List/
+Obj/
+settings/
+*.dep
+
 # =========================
 # Operating System Files
 # =========================
