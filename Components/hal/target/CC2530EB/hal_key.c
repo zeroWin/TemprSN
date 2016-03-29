@@ -139,7 +139,7 @@
 #define HAL_KEY_WORK_IEN      IEN2  /* CPU interrupt mask register */
 #define HAL_KEY_WORK_IENBIT   BV(4) /* Mask bit for all of Port_1 */
 #define HAL_KEY_WORK_ICTL     P1IEN /* Port Interrupt Control register */
-#define HAL_KEY_WORK_ICTLBIT  BV(7) /* P0IEN - P1.7 enable/disable bit */
+#define HAL_KEY_WORK_ICTLBIT  BV(7) /* P1IEN - P1.7 enable/disable bit */
 #define HAL_KEY_WORK_PXIFG    P1IFG /* Interrupt flag at source */
 
 //“‘∫Û…æµÙ
