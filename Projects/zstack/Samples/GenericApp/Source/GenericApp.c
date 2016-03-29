@@ -64,6 +64,7 @@
 #include "hal_uart.h"
 #include "hal_oled.h"
 
+#include "string.h"
 /*********************************************************************
  * MACROS
  */
@@ -412,6 +413,18 @@ void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
 #elif defined( WIN32 )
       WPRINTSTR( pkt->cmd.Data );
 #endif
+      HalOledShowString(20,0,16,(uint8 *)pkt->cmd.Data);
+      HalOledShowString(20,15,16,"V0.01");
+      HalOledRefreshGram();
+      if( strcmp((char*)pkt->cmd.Data,"Start") == 0 )
+      {
+        //osal_set_event( GenericApp_TaskID , GENERICAPP_START_MEASURE );
+      }
+      else if( strcmp((char*)pkt->cmd.Data,"End") == 0)
+      {
+        //osal_set_event( GenericApp_TaskID , GENERICAPP_END_MEASURE );
+      }
+      
       break;
   }
 }
