@@ -48,17 +48,17 @@
 /***************************************************************************************************
  *                                             CONSTANTS
  ***************************************************************************************************/
-/* OLED RST is at P0.3 */
-#define OLED_RST_PORT 0
-#define OLED_RST_PIN  4
+/* OLED RST is at P1.3 */
+#define OLED_RST_PORT 1
+#define OLED_RST_PIN  3
 
-/* OLED SCL is at P0.4 */
-#define OLED_SCL_PORT 0
-#define OLED_SCL_PIN  4
+/* OLED SCL is at P1.2 */
+#define OLED_SCL_PORT 1
+#define OLED_SCL_PIN  2
 
-/* OLED SDA is at P0.5 */
-#define OLED_SDA_PORT 0
-#define OLED_SDA_PIN  5
+/* OLED SDA is at P1.1 */
+#define OLED_SDA_PORT 1
+#define OLED_SDA_PIN  1
 
 /***************************************************************************************************
  *                                              MACROS
