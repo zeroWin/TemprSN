@@ -166,8 +166,8 @@ void GenericApp_Init( byte task_id )
   // If the hardware is application specific - add it here.
   // If the hardware is other parts of the device add it in main().
 
-  GenericApp_DstAddr.addrMode = (afAddrMode_t)AddrNotPresent;
-  GenericApp_DstAddr.endPoint = 0;
+  GenericApp_DstAddr.addrMode = (afAddrMode_t)Addr16Bit;
+  GenericApp_DstAddr.endPoint = GENERICAPP_ENDPOINT;
   GenericApp_DstAddr.addr.shortAddr = 0;
 
   // Fill out the endpoint description.
