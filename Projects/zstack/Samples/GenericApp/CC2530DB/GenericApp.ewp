@@ -3234,6 +3234,9 @@
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_led.h</name>
       </file>
       <file>
+        <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_oled.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_sleep.h</name>
       </file>
       <file>
@@ -3274,6 +3277,9 @@
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_led.c</name>
           </file>
           <file>
+            <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_oled.c</name>
+          </file>
+          <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_sleep.c</name>
           </file>
           <file>
@@ -3299,6 +3305,9 @@
           </file>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_types.h</name>
+          </file>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\OLED_FRONT.h</name>
           </file>
         </group>
       </group>
