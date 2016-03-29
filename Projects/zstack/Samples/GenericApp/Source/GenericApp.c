@@ -259,10 +259,10 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
               || (GenericApp_NwkState == DEV_ROUTER)
               || (GenericApp_NwkState == DEV_END_DEVICE) )
           {
-            // Start sending "the" message in a regular interval.
-            osal_start_timerEx( GenericApp_TaskID,
-                                GENERICAPP_SEND_MSG_EVT,
-                                GENERICAPP_SEND_MSG_TIMEOUT );
+//            // Start sending "the" message in a regular interval.
+//            osal_start_timerEx( GenericApp_TaskID,
+//                                GENERICAPP_SEND_MSG_EVT,
+//                                GENERICAPP_SEND_MSG_TIMEOUT );
           }
           break;
 
