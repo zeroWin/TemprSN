@@ -3222,6 +3222,9 @@
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_drivers.h</name>
       </file>
       <file>
+        <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_external_flash.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_flash.h</name>
       </file>
       <file>
@@ -3263,6 +3266,9 @@
           </file>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_dma.c</name>
+          </file>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_external_flash.c</name>
           </file>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_flash.c</name>
