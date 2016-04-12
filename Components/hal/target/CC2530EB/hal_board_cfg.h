@@ -458,6 +458,11 @@ st( \
 #define HAL_KEY TRUE
 #endif
 
+/* Set to TRUE enable Ext flash usage, FALSE disable it */
+#ifndef HAL_EXTERNAL_FLASH
+#define HAL_EXTERNAL_FLASH TRUE
+#endif
+
 /* Set to TRUE enable UART usage, FALSE disable it */
 #ifndef HAL_UART
 #if (defined ZAPP_P1) || (defined ZAPP_P2) || (defined ZTOOL_P1) || (defined ZTOOL_P2)
