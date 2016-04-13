@@ -94,8 +94,38 @@
  *
  * @return  None
  **************************************************************************************************/
+
+
 void HalExtFlashInit(void)
 {
+  /* Mode select UART0 SPI Mode as master. */
+  U0CSR = 0; 
+  
+  /* Setup for 115200 baud. */
+  U0GCR = 11; 
+  U0BAUD = 216; 
+  
+  /* Set bit order to MSB */
+  U0GCR |= BV(5); 
+  
+  /* Set UART0 I/O to alternate 1 location on P0 pins. */
+  PERCFG &= ~0x01;  /* U0CFG */
+  
+  /* Select peripheral function on I/O pins but SS is left as GPIO for separate control. */
+  P0SEL |= 0x3C;  /* SELP0_[5:2] */
+  /* P0.4 reset, XNV CS. */
+  P0SEL &= ~0x10; 
+  P0 |= 0x10; 
+  P0_6 = 0; 
+  P0DIR |= 0x40; 
+  
+  /* Give UART0 priority over UART1 priority over Timer1. */
+  P2DIR &= ~0xC0;  /* PRIP0 */
+  
+  /* When SPI config is complete, enable it. */
+  U0CSR |= 0x40; 
+  /* Release XNV reset. */
+  P0_6 = 1;   
 }
 
 #else
