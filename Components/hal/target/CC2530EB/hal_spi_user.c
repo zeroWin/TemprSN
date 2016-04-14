@@ -102,11 +102,11 @@
 /***************************************************************************************************
  *                                              MACROS
  ***************************************************************************************************/
-#define SPI_BEGIN()             MCU_IO_OUTPUT(HAL_SPI_CE_PORT, HAL_SPI_CE_PIN, 0)
-#define SPI_END()               MCU_IO_OUTPUT(HAL_SPI_CE_PORT, HAL_SPI_CE_PIN, 1)
-#define SPI_TX(x)               st(UxCSR &= ~CSR_TX_BYTE; UxDBUF = (x);)
-#define SPI_RX()                UxDBUF
-#define SPI_WAIT_RXRDY()        st(while (!(UxCSR & CSR_TX_BYTE));) //发送完，接收就完了。
+#define HAL_SPI_FLASH_ENABLE()      MCU_IO_OUTPUT(HAL_SPI_CE_PORT, HAL_SPI_CE_PIN, 0)
+#define HAL_SPI_FLASH_DISABLE()     MCU_IO_OUTPUT(HAL_SPI_CE_PORT, HAL_SPI_CE_PIN, 1)
+#define HAL_SPI_TX(x)               st(UxCSR &= ~CSR_TX_BYTE; UxDBUF = (x);)
+#define HAL_SPI_RX()                UxDBUF
+#define HAL_SPI_WAIT_RXRDY()        st(while (!(UxCSR & CSR_TX_BYTE));) //发送完，接收就完了。
 
 
 /**************************************************************************************************
@@ -155,7 +155,7 @@ void HalSpiUInit(void)
   UxCSR |= CSR_RE; 
 
   /* Release XNV reset. */
-  SPI_END(); 
+  HAL_SPI_FLASH_DISABLE(); 
 }
 
 
@@ -172,48 +172,48 @@ uint8 HalSpiWriteReadByte(uint8 TxData)
 {
   uint8 RxData;
   
-  SPI_TX(TxData);
-  SPI_WAIT_RXRDY();
-  RxData = SPI_RX();
+  HAL_SPI_TX(TxData);
+  HAL_SPI_WAIT_RXRDY();
+  RxData = HAL_SPI_RX();
    
   return RxData;
 }
 
 
 /**************************************************************************************************
- * @fn      HalSpiStart
+ * @fn      HalSpiFlashEnable
  *
- * @brief   Enable Deivce.CE=0
+ * @brief   Enable Flash Deivce.CE=0
  *
  * @param  
  *
  * @return  
  **************************************************************************************************/
-void HalSpiStart(void)
+void HalSpiFlashEnable(void)
 {
-  SPI_BEGIN();
+  HAL_SPI_FLASH_ENABLE();
 }
 
 
 /**************************************************************************************************
- * @fn      HalSpiEnd
+ * @fn      HalSpiFlashDisable
  *
- * @brief   Disable Device.CE=1
+ * @brief   Disable Flash Deivce.CE=1
  *
  * @param   
  *
  * @return  
  **************************************************************************************************/
-void HalSpiEnd(void)
+void HalSpiFlashDisable(void)
 {
-  SPI_END();
+  HAL_SPI_FLASH_DISABLE();
 }
 
 #else
 
 void HalSpiUInit(void);
 void HalSpiWriteReadByte(void);
-void HalSpiStart(void);
-void HalSpiEnd(void);
+void HalSpiFlashEnable(void);
+void HalSpiFlashDisable(void);
 
 #endif

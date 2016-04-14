@@ -64,7 +64,6 @@
 #include "hal_uart.h"
 #include "hal_oled.h"
 #include "hal_external_flash.h"
-#include "hal_spi_user.h"
 
 #include "string.h"
 /*********************************************************************
@@ -379,11 +378,6 @@ void GenericApp_HandleKeys( byte shift, byte keys )
     HalOledShowNum(0,0,_NIB.nwkPanId,5,16);
     HalOledShowNum(50,0,_NIB.nwkDevAddress,5,16);  
     HalOledShowNum(0,15,_NIB.nwkCoordAddress,1,16);
-    
-    HalSpiStart();  
-    HalSpiWriteReadByte(0x05);
-    uint8 a = HalSpiWriteReadByte(0xFF);
-    HalSpiEnd();    
   }
   if(keys & HAL_KEY_SW_7)
   {

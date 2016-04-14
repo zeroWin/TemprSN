@@ -81,14 +81,14 @@ extern void HalSpiUInit(void);
 extern uint8 HalSpiWriteReadByte(uint8 TxData);
 
 /*
- * Enable Deivce.CE=0
+ * Enable Flash Deivce.CE=0
  */
-extern void HalSpiStart(void);
+extern void HalSpiFlashEnable(void);
 
 /*
- * Disable Device.CE=1
+ * Disable Flash Deivce.CE=1
  */
-extern void HalSpiEnd(void);
+extern void HalSpiFlashDisable(void);
 
 #ifdef __cplusplus
 }
