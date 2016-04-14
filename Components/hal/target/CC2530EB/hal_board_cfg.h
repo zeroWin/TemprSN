@@ -458,6 +458,11 @@ st( \
 #define HAL_KEY TRUE
 #endif
 
+/* Set to TRUE enable SPI USER usage, FALSE disable it */
+#ifndef HAL_SPI_USER
+#define HAL_SPI_USER TRUE
+#endif
+
 /* Set to TRUE enable Ext flash usage, FALSE disable it */
 #ifndef HAL_EXTERNAL_FLASH
 #define HAL_EXTERNAL_FLASH TRUE
