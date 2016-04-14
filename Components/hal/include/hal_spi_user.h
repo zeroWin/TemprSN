@@ -76,9 +76,14 @@ extern "C"
 extern void HalSpiUInit(void);
 
 /*
- * Write and read a Byte.
+ * Write a Byte.
  */
-extern uint8 HalSpiWriteReadByte(uint8 TxData);
+extern uint8 HalSpiWriteByte(uint8 TxData);
+
+/*
+ * Read a Byte.
+ */
+extern uint8 HalSpiReadByte(void);
 
 /*
  * Enable Flash Deivce.CE=0

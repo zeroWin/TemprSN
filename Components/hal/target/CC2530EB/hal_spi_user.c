@@ -94,6 +94,8 @@
 #define HAL_SPI_UxBAUD_NUM             216 
 #define HAL_SPI_UxGCR_NUM              11
 
+/* Dummy Byte */
+#define DUMMY_BYTE     0xFF
 /***************************************************************************************************
  *                                              TYPEDEFS
  ***************************************************************************************************/
@@ -160,23 +162,37 @@ void HalSpiUInit(void)
 
 
 /**************************************************************************************************
- * @fn      HalSpiWriteReadByte
+ * @fn      HalSpiWriteByte
  *
- * @brief   Write and read a Byte
+ * @brief   Write a Byte
  *
  * @param   Write Byte
  *
  * @return  Read Byte
  **************************************************************************************************/
-uint8 HalSpiWriteReadByte(uint8 TxData)
+uint8 HalSpiWriteByte(uint8 TxData)
 {
   uint8 RxData;
   
   HAL_SPI_TX(TxData);
   HAL_SPI_WAIT_RXRDY();
   RxData = HAL_SPI_RX();
-   
+  
   return RxData;
+}
+
+/**************************************************************************************************
+ * @fn      HalSpiReadByte
+ *
+ * @brief   Read a Byte
+ *
+ * @param   
+ *
+ * @return  Read Byte
+ **************************************************************************************************/
+uint8 HalSpiReadByte(void)
+{
+  return HalSpiWriteByte(DUMMY_BYTE);
 }
 
 
@@ -212,8 +228,9 @@ void HalSpiFlashDisable(void)
 #else
 
 void HalSpiUInit(void);
-void HalSpiWriteReadByte(void);
 void HalSpiFlashEnable(void);
 void HalSpiFlashDisable(void);
+uint8 HalSpiWriteByte(void);
+uint8 HalSpiReadByte(void);
 
 #endif
