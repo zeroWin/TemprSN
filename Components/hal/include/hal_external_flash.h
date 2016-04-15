@@ -35,7 +35,7 @@
 
   Should you have any questions regarding your right to use this Software,
   contact kylinnevercry@gami.com. 
-  使用SST25FV016B 芯片作为外置FALSH
+  使用SST25FV016B 芯片作为外置FALSH 16Mbit=2MB
 **************************************************************************************************/
 
 #ifndef HAL_EXTERNAL_FLASH_H
@@ -59,13 +59,7 @@ extern "C"
 /**************************************************************************************************
  *                                              MACROS
  **************************************************************************************************/
-#define Ext_SPI_BEGIN()             st(P0_6 = 0;)
-#define Ext_SPI_END()               st(P0_6 = 1;)
-#define Ext_SPI_TX(x)               st(U0CSR &= ~0x02; U0DBUF = (x);)
-#define Ext_SPI_RX()                U0DBUF
-#define Ext_SPI_WAIT_RXRDY()        st(while (!(U0CSR & 0x02));) //发送完，接收就完了。
-  
-  
+
 /**************************************************************************************************
  *                                            CONSTANTS
  **************************************************************************************************/
@@ -81,6 +75,7 @@ extern "C"
 extern void HalExtFlashInit(void);
 
 
+extern uint16 HalExtFlashReadId(void);
 
 #ifdef __cplusplus
 }

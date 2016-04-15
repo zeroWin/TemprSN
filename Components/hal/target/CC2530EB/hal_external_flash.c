@@ -35,33 +35,40 @@
 
   Should you have any questions regarding your right to use this Software,
   contact kylinnevercry@gami.com.
-  使用SST25FV016B 芯片作为外置FALSH
+  使用SST25FV016B 芯片作为外置FALSH 16Mbit=2MB
 **************************************************************************************************/
 
 /***************************************************************************************************
  *                                             INCLUDES
  ***************************************************************************************************/
 #include "hal_external_flash.h"
+#include "hal_spi_user.h"
 
 #if (defined HAL_EXTERNAL_FLASH) && (HAL_EXTERNAL_FLASH == TRUE)
 /***************************************************************************************************
  *                                             CONSTANTS
  ***************************************************************************************************/
-/* Ext Flash CE is at P0.6 */
-#define EXT_FLASH_CE_PORT  0
-#define EXT_FLASH_CE_PIN   6
+#define F_READ_COMMAND                  0x03    //Read Memory at 25 MHz
+#define F_HIGH_SPEED_READ_COMMAND       0x0B    // Read Memory at 50 MHz
+#define F_4K_ERASE_COMMAND              0x20    // Erase 4 KByte of memory array
+#define F_32K_ERASE_COMMAND             0x52    // Erase 32 KByte of memory array           
+#define F_64K_ERASE_COMMAND             0xD8    // Erase 64 KByte of memory array
+#define F_CHIP_ERASE_COMMAND            0x60    // Erase Full Memory Array
+#define F_BYTE_PROGRAM_COMMAND          0x02    // To Program One Data Byte
+#define F_AAI_WORD_PROGRAM_COMMAND      0xAD    // Auto Address Increment Programming
+#define F_RDSR_COMMAND                  0x05    // Read-Status-Register
+#define F_EWSR_COMMAND                  0x50    // Enable-Write-Status-Register
+#define F_WRSR_COMMAND                  0x01    // Write-Status-Register
+#define F_WREN_COMMAND                  0x06    // Write-Enable
+#define F_WRDI_COMMAND                  0x04    // Write-Disable
+#define F_RDID_COMMAND                  0x90    // Read-ID
+#define F_JEDEC_ID_COMMAND              0x9F    // JEDEC ID read
+#define F_EBSY_COMMAND                  0x70    // Enable SO to output RY/BY# status during AAI programming
+#define F_DBSY_COMMAND                  0x80    // Disable SO to output RY/BY# status during AAI programming
 
-/* Ext Flash SCLK is at P0.5 */
-#define EXT_FLASH_SCLK_PORT   0
-#define EXT_FLASH_SCLK_PIN    5
-
-/* Ext Flash SI -- CC2530 SPI-MO is at P0.3 */
-#define EXT_FLASH_MOSI_PORT 0
-#define EXT_FLASH_MOSI_PIN  3
-
-/* Ext Flash SO -- CC2530 SPI-MI is at P0.2 */
-#define EXT_FLASH_MISO_PORT 0
-#define EXT_FLASH_MISO_PIN  2
+/***************************************************************************************************
+ *                                              MACROS
+ ***************************************************************************************************/
 
 /***************************************************************************************************
  *                                              TYPEDEFS
@@ -74,13 +81,8 @@
 /**************************************************************************************************
  *                                        FUNCTIONS - Local
  **************************************************************************************************/
+void HalExtFlashSendAddr(uint32 Addr);
 
-  
-/***************************************************************************************************
- *                                              MACROS
- ***************************************************************************************************/
-
-  
 /**************************************************************************************************
  *                                        FUNCTIONS - API
  **************************************************************************************************/
@@ -94,41 +96,59 @@
  *
  * @return  None
  **************************************************************************************************/
-
-
 void HalExtFlashInit(void)
 {
-  /* Mode select UART0 SPI Mode as master. */
-  U0CSR = 0; 
-  
-  /* Setup for 115200 baud. */
-  U0GCR = 11; 
-  U0BAUD = 216; 
-  
-  /* Set bit order to MSB */
-  U0GCR |= BV(5); 
-  
-  /* Set UART0 I/O to alternate 1 location on P0 pins. */
-  PERCFG &= ~0x01;  /* U0CFG */
-  
-  /* Select peripheral function on I/O pins but SS is left as GPIO for separate control. */
-  P0SEL |= 0x3C;  /* SELP0_[5:2] */
-  /* P0.4 reset, XNV CS. */
-  P0SEL &= ~0x10; 
-  P0 |= 0x10; 
-  P0_6 = 0; 
-  P0DIR |= 0x40; 
-  
-  /* Give UART0 priority over UART1 priority over Timer1. */
-  P2DIR &= ~0xC0;  /* PRIP0 */
-  
-  /* When SPI config is complete, enable it. */
-  U0CSR |= 0x40; 
-  /* Release XNV reset. */
-  P0_6 = 1;   
 }
 
+
+/**************************************************************************************************
+ * @fn      HalExtFlashReadId
+ *
+ * @brief   Read Manufacturers ID and Device ID
+ *
+ * @param   none
+ *
+ * @return  High Byte is manufacturer's ID
+            Low Byte is devcie ID
+ **************************************************************************************************/
+uint16 HalExtFlashReadId(void)
+{
+  uint16 ID;
+  uint8 ManuID,DeviceID;
+  
+  HalSpiFlashEnable(); // 选中芯片
+  
+  HalSpiWriteByte(F_RDID_COMMAND);  // 发送Read ID 命令
+  HalExtFlashSendAddr(0x000000);    // 发送24位的地址字节
+
+  ManuID = HalSpiReadByte();
+  DeviceID = HalSpiReadByte();
+  
+  HalSpiFlashDisable(); // 不选中芯片
+  
+  ID = (((uint16)ManuID << 8) | DeviceID );
+  return ID;
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashSendAddr
+ *
+ * @brief   Send 24byte address
+ *
+ * @param   addr - 0x000000 to 0x1FFFFF = 2MB的地址
+ *
+ * @return  
+ **************************************************************************************************/
+void HalExtFlashSendAddr(uint32 Addr)
+{
+  HalSpiWriteByte((Addr & 0xFF0000) >> 16); 
+  HalSpiWriteByte((Addr & 0xFF00) >> 8);
+  HalSpiWriteByte((Addr & 0xFF) >> 16);
+}
 #else
 
+void HalExtFlashInit(void);
+uint16 HalExtFlashReadId(void);
 
 #endif /* HAL_EXTERNAL_FLASH */
