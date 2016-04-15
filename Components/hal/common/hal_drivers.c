@@ -175,15 +175,15 @@ void HalDriverInit (void)
   HalKeyInit();
 #endif
 
+ /* SPI user */  
+#if (defined HAL_SPI_USER) && (HAL_SPI_USER == TRUE)
+  HalSpiUInit();
+#endif
+  
   /* External flash */
 #if (defined HAL_EXTERNAL_FLASH) && (HAL_EXTERNAL_FLASH == TRUE)
   HalExtFlashInit();
 #endif 
-  
-  /* SPI user */  
-#if (defined HAL_SPI_USER) && (HAL_SPI_USER == TRUE)
-  HalSpiUInit();
-#endif
   
   /* SPI */
 #if (defined HAL_SPI) && (HAL_SPI == TRUE)
