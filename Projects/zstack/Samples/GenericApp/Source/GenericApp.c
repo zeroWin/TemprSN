@@ -373,17 +373,30 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
  */
 void GenericApp_HandleKeys( byte shift, byte keys )
 {
+  uint8 buffer[512];
+  uint16 i = 0 ;
   if(keys & HAL_KEY_SW_6)
   {
     HalOledShowNum(0,0,_NIB.nwkPanId,5,16);
     HalOledShowNum(50,0,_NIB.nwkDevAddress,5,16);  
     HalOledShowNum(0,15,_NIB.nwkCoordAddress,1,16);
+    //a = HalExtFlashReadStatusRegister();
+    //a = HalExtFlashReadJEDECId();
+    
+    HalExtFlashBufferRead(buffer,0x000000,512);
   }
   if(keys & HAL_KEY_SW_7)
   {
     HalOledShowChar(0,0,'b',12,1);
   }
-  
+  for(i = 0 ; i<512;i++)
+  {
+    if(buffer[i] != 0xFF)
+    {
+      uint8 b = buffer[i];
+      b = i;
+    }
+  }
   HalOledRefreshGram();
 }
 

@@ -74,8 +74,22 @@ extern "C"
  */
 extern void HalExtFlashInit(void);
 
-
+/*
+ * Read Id.
+ */
 extern uint16 HalExtFlashReadId(void);
+
+/*
+ * Read JEDEC Id.
+ */
+extern uint32 HalExtFlashReadJEDECId(void);
+
+
+/*
+ * Read data.
+ * PS: 如果watch显示数组某些元素是0，可能是编译器的问题，其实值不是0。
+ */
+extern void HalExtFlashBufferRead(uint8 *pBuffer,uint32 readAddress,uint16 readLength);
 
 #ifdef __cplusplus
 }
