@@ -52,6 +52,8 @@
 #include "hal_lcd.h"
 #include "hal_led.h"
 #include "hal_oled.h"
+#include "hal_external_flash.h"
+#include "hal_spi_user.h"
 #include "hal_timer.h"
 #include "hal_uart.h"
 #include "hal_sleep.h"
@@ -173,6 +175,16 @@ void HalDriverInit (void)
   HalKeyInit();
 #endif
 
+ /* SPI user */  
+#if (defined HAL_SPI_USER) && (HAL_SPI_USER == TRUE)
+  HalSpiUInit();
+#endif
+  
+  /* External flash */
+#if (defined HAL_EXTERNAL_FLASH) && (HAL_EXTERNAL_FLASH == TRUE)
+  HalExtFlashInit();
+#endif 
+  
   /* SPI */
 #if (defined HAL_SPI) && (HAL_SPI == TRUE)
   HalSpiInit();

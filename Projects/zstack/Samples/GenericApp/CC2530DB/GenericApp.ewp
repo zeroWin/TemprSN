@@ -2396,6 +2396,7 @@
           <state>xMT_SYS_FUNC</state>
           <state>xMT_ZDO_FUNC</state>
           <state>xLCD_SUPPORTED=DEBUG</state>
+          <state>HAL_UART=FALSE</state>
           <state>xPOWER_SAVING</state>
         </option>
         <option>
@@ -2477,7 +2478,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>11101</state>
+          <state>00000</state>
         </option>
         <option>
           <name>CCObjUseModuleName</name>
@@ -2607,7 +2608,7 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
@@ -2616,7 +2617,7 @@
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CompilerMisraRules04</name>
@@ -3222,6 +3223,9 @@
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_drivers.h</name>
       </file>
       <file>
+        <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_external_flash.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_flash.h</name>
       </file>
       <file>
@@ -3238,6 +3242,9 @@
       </file>
       <file>
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_sleep.h</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_spi_user.h</name>
       </file>
       <file>
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_timer.h</name>
@@ -3265,6 +3272,9 @@
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_dma.c</name>
           </file>
           <file>
+            <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_external_flash.c</name>
+          </file>
+          <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_flash.c</name>
           </file>
           <file>
@@ -3281,6 +3291,9 @@
           </file>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_sleep.c</name>
+          </file>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_spi_user.c</name>
           </file>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_startup.c</name>
