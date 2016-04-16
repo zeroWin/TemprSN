@@ -64,6 +64,8 @@
 #include "hal_uart.h"
 #include "hal_oled.h"
 #include "hal_external_flash.h"
+#include "ff.h"
+#include "exfuns.h"
 
 #include "string.h"
 /*********************************************************************
