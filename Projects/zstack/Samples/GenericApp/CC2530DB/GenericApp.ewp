@@ -2271,11 +2271,11 @@
         <option>
           <name>Input variant</name>
           <version>0</version>
-          <state>2</state>
+          <state>0</state>
         </option>
         <option>
           <name>Input description</name>
-          <state>No float.</state>
+          <state>Full formatting.</state>
         </option>
         <option>
           <name>Output variant</name>
@@ -2284,7 +2284,7 @@
         </option>
         <option>
           <name>Output description</name>
-          <state>No float, no field width, no precision.</state>
+          <state>No specifier a or A, no specifier n, no float or long long.</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -2584,6 +2584,8 @@
           <state>$PROJ_DIR$\..\..\..\..\..\Components\stack\zdo</state>
           <state>$PROJ_DIR$\..\..\..\..\..\Components\zmac</state>
           <state>$PROJ_DIR$\..\..\..\..\..\Components\zmac\f8w</state>
+          <state>$PROJ_DIR$\..\..\..\..\..\Components\fatfs\src</state>
+          <state>$PROJ_DIR$\..\..\..\..\..\Components\fatfs\exfuns</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -3181,6 +3183,12 @@
   </configuration>
   <group>
     <name>App</name>
+    <file>
+      <name>$PROJ_DIR$\..\..\..\..\..\Components\fatfs\exfuns\exfuns.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\..\..\..\Components\fatfs\exfuns\exfuns.h</name>
+    </file>
     <file>
       <name>$PROJ_DIR$\..\Source\GenericApp.c</name>
     </file>
