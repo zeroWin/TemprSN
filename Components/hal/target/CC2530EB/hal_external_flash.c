@@ -95,6 +95,10 @@ void HalExtFlash64KBlockErase(uint32 addr);
 void HalExtFlash32KBlockErase(uint32 addr);
 void HalExtFlash4KSectorErase(uint32 addr);
 void HalExtFlashWaitWriteEnd(void);
+
+void HalExtFlashBufferWriteNoCheck(uint8* writeBuffer,uint32 writeAddress,uint16 writeLength);
+void HalExtFlashBufferWritePage(uint8* writeBuffer,uint32 writeAddress,uint16 writeLength);
+void HalExtFlashBufferAAIWrite(uint8* writeBuffer,uint32 writeAddress,uint16 writeLength);
 /**************************************************************************************************
  *                                        FUNCTIONS - API
  **************************************************************************************************/
@@ -148,25 +152,141 @@ void HalExtFlashByteWrite(uint32 writeAddress,uint8 writeData)
  *
  * @brief   buffer write
  *
- * @param   writebuffer - write data
+ * @param   writeBuffer - write data
  *          writeAddr - write data address
- *          writeLength - write length 必须是偶数，不做处理了，用的时候刻意都用偶数
+ *          writeLength - write length
  *
  * @return
  **************************************************************************************************/
-void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeLength)
+void HalExtFlashBufferWrite(uint8* writeBuffer,uint32 writeAddress,uint16 writeLength)
+{
+  uint16 secPos;
+  uint16 secOff;
+  uint16 secRemain;
+  uint8 SPI_FLASH_BUF[4096];
+  uint16 i;
+  
+  secPos = writeAddress/4096; // 扇区地址 0~511
+  secOff = writeAddress%4096; // 在扇区内偏移
+  secRemain = 4096 - secOff;  // 扇区剩余空间大小
+  
+  if(writeLength <= secRemain ) secRemain = writeLength;  // 写入小于剩余空间
+  while(1)
+  {
+    HalExtFlashBufferRead(SPI_FLASH_BUF,secPos*4096,4096);  // 读出扇区所有内容
+    for(i = 0; i < secRemain ; i++ )  // 校验数据
+    {
+      if(SPI_FLASH_BUF[secOff + i] != 0xFF)
+        break;  // 需要擦数
+    }
+    if( i < secRemain ) // 需要擦除
+    {
+      HalExtFlash4KSectorErase(secPos); // 擦除这个扇区
+      for(i = 0; i < secRemain; i++ ) // 复制数据
+        SPI_FLASH_BUF[secOff + i] = writeBuffer[i];
+      HalExtFlashBufferWriteNoCheck(writeBuffer,secPos*4096,4096);  // 写入整个扇区
+    }
+    else HalExtFlashBufferWriteNoCheck(writeBuffer,writeAddress,secRemain); // 直接写入剩余区间
+    if(writeLength == secRemain)
+      break;  // 写入结束
+    else
+    {
+      secPos++;   // 扇区地址加1
+      secOff = 0; // 偏移位置0
+      
+      writeBuffer += secRemain;   // 数据数组指针偏移
+      writeAddress += secRemain;  // 写地址偏移，第x个扇区的起始位置
+      writeLength -= secRemain;   // 剩余要写入的字节数
+      if(writeLength > 4096) secRemain = 4096;  // 下一个扇区写不完
+      else secRemain = writeLength; // 下一个扇区能够写完
+    }
+  }
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashBufferWriteNoCheck
+ *
+ * @brief   buffer write no check.
+ *          无校验写FLASH，必须保证所写地址范围内数据全部为0xFF，否则在非0xFF处写数据可能失败
+ *          具有自动换页功能。页为自定义，定义一页为256个字节
+ *          在指定地址开始写入指定长度的数据，但要保证地址不越界
+ *
+ * @param   writeBuffer - write data
+ *          writeAddr - write data address
+ *          writeLength - write length 最大65535
+ *
+ * @return
+ **************************************************************************************************/
+void HalExtFlashBufferWriteNoCheck(uint8* writeBuffer,uint32 writeAddress,uint16 writeLength)
+{
+  uint16 pageRemain;
+  pageRemain = 256 - writeAddress%256;  // 单页剩余字节数
+  if( writeLength <= pageRemain ) pageRemain = writeLength; // 该页剩余空间足够
+  while(1)
+  {
+    HalExtFlashBufferWritePage(writeBuffer,writeAddress,pageRemain);
+    if(writeLength == pageRemain) 
+      break;  //写入结束
+    else 
+    {
+      writeBuffer += pageRemain;
+      writeAddress += pageRemain;
+      
+      writeLength -= pageRemain;
+      if(writeLength > 256) pageRemain = 256; // 一次可以写256个字节
+      else pageRemain = writeLength;  // 不够256个字节写入剩下的
+    }
+  }
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashBufferWritePage
+ *
+ * @brief   SPI在一页写入少于256个字节的数据
+ *          从指定地址开始最大256字节的数据
+ *
+ * @param   writeBuffer - write data
+ *          writeAddr - write data address
+ *          writeLength - write length
+ *
+ * @return
+ **************************************************************************************************/
+void HalExtFlashBufferWritePage(uint8* writeBuffer,uint32 writeAddress,uint16 writeLength)
+{
+  uint16 i;
+  for( i = 0; i < writeLength; i++ )
+  {
+    HalExtFlashByteWrite(writeAddress,writeBuffer[i]);
+    writeAddress++;
+  }
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashBufferWritePage
+ *
+ * @brief   AAI write 这种写入方式太麻烦了，芯片设计的不好，不用这种方式。
+ *
+ * @param   writeBuffer - write data
+ *          writeAddr - write data address
+ *          writeLength - write length
+ *
+ * @return
+ **************************************************************************************************/
+void HalExtFlashBufferAAIWrite(uint8* writeBuffer,uint32 writeAddress,uint16 writeLength)
 {
   uint16 writeNum = (writeLength/2) - 1;
   
-  HalExtFlashWriteEnable();     //write enable
-  
-  HalSpiFlashEnable(); // 选中芯片
+  HalExtFlashWriteEnable();     // write enable
+  HalSpiFlashEnable();          // 选中芯片
 
   // write first 2 byte
   HalSpiWriteByte(F_AAI_WORD_PROGRAM_COMMAND);    // 发送AAI program 命令
   HalExtFlashSendAddr(writeAddress);              // 发送数据写入地址
-  HalSpiWriteByte(*writebuffer++);                // 发送数据
-  HalSpiWriteByte(*writebuffer++);                // 发送数据
+  HalSpiWriteByte(*writeBuffer++);                // 发送数据
+  HalSpiWriteByte(*writeBuffer++);                // 发送数据
   
   HalSpiFlashDisable(); // 不选中芯片  
   HalExtFlashWaitWriteEnd();    // wait for write end
@@ -176,15 +296,15 @@ void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeL
     HalSpiFlashEnable(); // 选中芯片
       
     HalSpiWriteByte(F_AAI_WORD_PROGRAM_COMMAND);    // 发送AAI program 命令
-    HalSpiWriteByte(*writebuffer++);                // 发送数据
-    HalSpiWriteByte(*writebuffer++);                // 发送数据
+    HalSpiWriteByte(*writeBuffer++);                // 发送数据
+    HalSpiWriteByte(*writeBuffer++);                // 发送数据
     
     HalSpiFlashDisable(); // 不选中芯片      
     HalExtFlashWaitWriteEnd();    // wait for write end
   }
   
   HalExtFlashWriteDisable();    //write disable
-  while((HalExtFlashReadStatusRegister() & 0x03) != 0x00 ); // wait close
+  HalExtFlashWaitWriteEnd();    // wait for write end 
 }
 
 
@@ -557,5 +677,5 @@ void HalExtFlashBufferRead(uint8 *pBuffer,uint32 readAddress,uint16 readLength);
 uint8 HalExtFlashByteRead(uint32 readAddress);
 
 void HalExtFlashByteWrite(uint32 writeAddress,uint8 writeData);
-void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeLength)
+void HalExtFlashBufferWrite(uint8* writeBuffer,uint32 writeAddress,uint16 writeLength)
 #endif /* HAL_EXTERNAL_FLASH */
