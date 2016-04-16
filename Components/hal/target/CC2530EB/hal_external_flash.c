@@ -82,16 +82,19 @@
  *                                        FUNCTIONS - Local
  **************************************************************************************************/
 void HalExtFlashSendAddr(uint32 Addr);
+
 uint8 HalExtFlashReadStatusRegister(void);
+void HalExtFlashWriteStatusRegEnable(void);
+void HalExtFlashWriteStatusRegister(uint8 writeStatus);
+
 void HalExtFlashWriteDisable(void);
 void HalExtFlashWriteEnable(void);
-void HalExtFlashWriteStatusRegEnable(void);
-void HalExtFlashWaitWriteEnd(void);
 
 void HalExtFlashChipErase(void);
 void HalExtFlash64KBlockErase(uint32 addr);
 void HalExtFlash32KBlockErase(uint32 addr);
-void HalExtFlash4KBlockErase(uint32 addr);
+void HalExtFlash4KSectorErase(uint32 addr);
+void HalExtFlashWaitWriteEnd(void);
 /**************************************************************************************************
  *                                        FUNCTIONS - API
  **************************************************************************************************/
@@ -108,13 +111,113 @@ void HalExtFlash4KBlockErase(uint32 addr);
  **************************************************************************************************/
 void HalExtFlashInit(void)
 {
+  // close all block protection
+  HalExtFlashWriteStatusRegister(0x00);
+  //HalExtFlashChipErase();
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashByteWrite
+ *
+ * @brief   one byte write
+ *
+ * @param   writeAddr - write data address
+ *          writeData - write data
+ *
+ * @return
+ **************************************************************************************************/
+void HalExtFlashByteWrite(uint32 writeAddress,uint8 writeData)
+{
+  HalExtFlashWriteEnable();     //write enable
+  
+  HalSpiFlashEnable(); // 选中芯片
+
+  HalSpiWriteByte(F_BYTE_PROGRAM_COMMAND);    // 发送Byte program 命令
+  HalExtFlashSendAddr(writeAddress);          // 发送数据写入地址
+  HalSpiWriteByte(writeData);                 // 发送数据
+  
+  HalSpiFlashDisable(); // 不选中芯片  
+  
+  HalExtFlashWaitWriteEnd();    // wait for write end
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashBufferWrite
+ *
+ * @brief   buffer write
+ *
+ * @param   writebuffer - write data
+ *          writeAddr - write data address
+ *          writeLength - write length 必须是偶数，不做处理了，用的时候刻意都用偶数
+ *
+ * @return
+ **************************************************************************************************/
+void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeLength)
+{
+  uint16 writeNum = (writeLength/2) - 1;
+  
+  HalExtFlashWriteEnable();     //write enable
+  
+  HalSpiFlashEnable(); // 选中芯片
+
+  // write first 2 byte
+  HalSpiWriteByte(F_AAI_WORD_PROGRAM_COMMAND);    // 发送AAI program 命令
+  HalExtFlashSendAddr(writeAddress);              // 发送数据写入地址
+  HalSpiWriteByte(*writebuffer++);                // 发送数据
+  HalSpiWriteByte(*writebuffer++);                // 发送数据
+  
+  HalSpiFlashDisable(); // 不选中芯片  
+  HalExtFlashWaitWriteEnd();    // wait for write end
+  
+  while(writeNum--)
+  {
+    HalSpiFlashEnable(); // 选中芯片
+      
+    HalSpiWriteByte(F_AAI_WORD_PROGRAM_COMMAND);    // 发送AAI program 命令
+    HalSpiWriteByte(*writebuffer++);                // 发送数据
+    HalSpiWriteByte(*writebuffer++);                // 发送数据
+    
+    HalSpiFlashDisable(); // 不选中芯片      
+    HalExtFlashWaitWriteEnd();    // wait for write end
+  }
+  
+  HalExtFlashWriteDisable();    //write disable
+  while((HalExtFlashReadStatusRegister() & 0x03) != 0x00 ); // wait close
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashByteRead
+ *
+ * @brief   One Byte Read on 25Mhz
+ *
+ * @param   readAddr - read address
+ *
+ * @return  read data
+ **************************************************************************************************/
+uint8 HalExtFlashByteRead(uint32 readAddress)
+{
+  uint8 readData;
+  HalSpiFlashEnable(); // 选中芯片
+
+  HalSpiWriteByte(F_READ_COMMAND);    // 发送Read data 命令
+  HalExtFlashSendAddr(readAddress);   // 发送数据读取地址
+  
+  // read data
+  readData = HalSpiReadByte();
+  
+  HalSpiFlashDisable(); // 不选中芯片
+  
+  return readData;
 }
 
 
 /**************************************************************************************************
  * @fn      HalExtFlashBufferRead
  *
- * @brief   buffer Read
+ * @brief   buffer Read on 25Mhz
  *
  * @param   pBuffer - store the data
  *          readAddr - read start address
@@ -221,9 +324,9 @@ void HalExtFlashWriteStatusRegEnable(void)
 
 
 /**************************************************************************************************
- * @fn      HalExtFlash4KBlockErase
+ * @fn      HalExtFlash4KSectorErase
  *
- * @brief   4K block erase
+ * @brief   4K sector erase
  *
  * @param   erase head addr - 每次擦数4096 - 0x1000
  *          0x000000 - 0x000FFF 4096 = 4KB
@@ -234,7 +337,7 @@ void HalExtFlashWriteStatusRegEnable(void)
  *          芯片只会识别A23-A12位
  * @return  none
  **************************************************************************************************/
-void HalExtFlash4KBlockErase(uint32 addr)
+void HalExtFlash4KSectorErase(uint32 addr)
 {
   HalExtFlashWriteEnable();     //write enable
   
@@ -342,7 +445,7 @@ void HalExtFlashChipErase(void)
  **************************************************************************************************/
 void HalExtFlashWaitWriteEnd(void)
 {
-  while((HalExtFlashReadStatusRegister() & 0x01) == 1);
+  while((HalExtFlashReadStatusRegister() & 0x01) == 0x01);
 }
 
 
@@ -409,6 +512,28 @@ uint8 HalExtFlashReadStatusRegister(void)
 
 
 /**************************************************************************************************
+ * @fn      HalExtFlashWriteStatusRegister
+ *
+ * @brief   write status register
+ *
+ * @param   write status
+ *
+ * @return  
+ **************************************************************************************************/
+void HalExtFlashWriteStatusRegister(uint8 writeStatus)
+{
+  HalExtFlashWriteStatusRegEnable();
+  
+  HalSpiFlashEnable(); // 选中芯片
+  
+  HalSpiWriteByte(F_WRSR_COMMAND);  // 发送Write Status命令
+  HalSpiWriteByte(writeStatus);     // write data to status register
+  
+  HalSpiFlashDisable(); // 不选中芯片 
+}
+
+
+/**************************************************************************************************
  * @fn      HalExtFlashSendAddr
  *
  * @brief   Send 24byte address
@@ -429,6 +554,8 @@ void HalExtFlashInit(void);
 uint16 HalExtFlashReadId(void);
 uint32 HalExtFlashReadJEDECId(void);
 void HalExtFlashBufferRead(uint8 *pBuffer,uint32 readAddress,uint16 readLength);
+uint8 HalExtFlashByteRead(uint32 readAddress);
 
-
+void HalExtFlashByteWrite(uint32 writeAddress,uint8 writeData);
+void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeLength)
 #endif /* HAL_EXTERNAL_FLASH */

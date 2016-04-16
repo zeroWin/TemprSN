@@ -86,10 +86,28 @@ extern uint32 HalExtFlashReadJEDECId(void);
 
 
 /*
- * Read data.
+ * Read buffer data.
  * PS: 如果watch显示数组某些元素是0，可能是编译器的问题，其实值不是0。
  */
 extern void HalExtFlashBufferRead(uint8 *pBuffer,uint32 readAddress,uint16 readLength);
+
+
+/*
+ * Read one Byte data.
+ */
+extern uint8 HalExtFlashByteRead(uint32 readAddress);
+
+/*
+ * Write one Byte data.
+ */
+extern void HalExtFlashByteWrite(uint32 writeAddress,uint8 writeData);
+
+/*
+ * Write buffer data.
+ * PS:writeLength 必须是偶数也就是说必须发送偶数个数据
+ */
+extern void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeLength);
+
 
 #ifdef __cplusplus
 }
