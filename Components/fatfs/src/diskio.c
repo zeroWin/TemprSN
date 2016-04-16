@@ -8,15 +8,14 @@
 /*-----------------------------------------------------------------------*/
 
 #include "diskio.h"		/* FatFs lower layer API */
-#include "usbdisk.h"	/* Example: Header file of existing USB MSD control module */
-#include "atadrive.h"	/* Example: Header file of existing ATA harddisk control module */
-#include "sdcard.h"		/* Example: Header file of existing MMC/SDC contorl module */
+#include "hal_external_flash.h" /* Header file of existing FLASH contorl module */
 
 /* Definitions of physical drive number for each drive */
-#define ATA		0	/* Example: Map ATA harddisk to physical drive 0 */
-#define MMC		1	/* Example: Map MMC/SD card to physical drive 1 */
-#define USB		2	/* Example: Map USB MSD to physical drive 2 */
+#define ExFLASH           0       /* Map FLASH to physical drive 0 */
 
+#define FLASH_SECTOR_SIZE   512      /* 扇区大小512 这个可以自己定，不用和系统实际的扇区一致 */
+#define FLASH_SECTOR_COUNT  2048*2   /* 共 4096 个扇区   */
+#define FLASH_BLOCK_SIZE    8        /* 每个BLOCK有8个扇区 这里BLOCK实际是芯片中sector*/
 
 /*-----------------------------------------------------------------------*/
 /* Get Drive Status                                                      */
@@ -26,32 +25,8 @@ DSTATUS disk_status (
 	BYTE pdrv		/* Physical drive nmuber to identify the drive */
 )
 {
-	DSTATUS stat;
-	int result;
 
-	switch (pdrv) {
-	case ATA :
-		result = ATA_disk_status();
-
-		// translate the reslut code here
-
-		return stat;
-
-	case MMC :
-		result = MMC_disk_status();
-
-		// translate the reslut code here
-
-		return stat;
-
-	case USB :
-		result = USB_disk_status();
-
-		// translate the reslut code here
-
-		return stat;
-	}
-	return STA_NOINIT;
+  return RES_OK;
 }
 
 
@@ -64,32 +39,19 @@ DSTATUS disk_initialize (
 	BYTE pdrv				/* Physical drive nmuber to identify the drive */
 )
 {
-	DSTATUS stat;
-	int result;
-
-	switch (pdrv) {
-	case ATA :
-		result = ATA_disk_initialize();
-
-		// translate the reslut code here
-
-		return stat;
-
-	case MMC :
-		result = MMC_disk_initialize();
-
-		// translate the reslut code here
-
-		return stat;
-
-	case USB :
-		result = USB_disk_initialize();
-
-		// translate the reslut code here
-
-		return stat;
-	}
-	return STA_NOINIT;
+  uint8 res;
+  switch(pdrv)
+  {
+    case ExFLASH://外部flash
+      res = 0;
+      break;
+    default:
+      res = 1;
+  }
+  
+  // 处理返回值
+  if(res == 0x00) return RES_OK;
+  else return STA_NOINIT;
 }
 
 
@@ -102,42 +64,30 @@ DRESULT disk_read (
 	BYTE pdrv,		/* Physical drive nmuber to identify the drive */
 	BYTE *buff,		/* Data buffer to store read data */
 	DWORD sector,	/* Sector address in LBA */
-	UINT count		/* Number of sectors to read */
+	UINT count		/* Number of sectors to read 最多512个扇区*/
 )
 {
-	DRESULT res;
-	int result;
-
-	switch (pdrv) {
-	case ATA :
-		// translate the arguments here
-
-		result = ATA_disk_read(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
-
-	case MMC :
-		// translate the arguments here
-
-		result = MMC_disk_read(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
-
-	case USB :
-		// translate the arguments here
-
-		result = USB_disk_read(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
-	}
-
-	return RES_PARERR;
+  uint8 res;
+  if(!count)return RES_PARERR;  // count不能为0，否则返回参数错误
+  
+  switch(pdrv)
+  {
+    case ExFLASH://外部flash
+      while(count--)
+      {
+        HalExtFlashBufferRead(buff,sector*FLASH_SECTOR_SIZE,FLASH_SECTOR_SIZE);
+        sector++;
+        buff += FLASH_SECTOR_SIZE;
+      }
+      res = 0;
+      break;
+    default:
+      res = 1;
+  }
+  
+  // 处理返回值
+  if(res == 0x00) return RES_OK;
+  else return RES_ERROR;
 }
 
 
@@ -150,42 +100,30 @@ DRESULT disk_write (
 	BYTE pdrv,			/* Physical drive nmuber to identify the drive */
 	const BYTE *buff,	/* Data to be written */
 	DWORD sector,		/* Sector address in LBA */
-	UINT count			/* Number of sectors to write */
+	UINT count			/* Number of sectors to write 最多512个扇区*/
 )
 {
-	DRESULT res;
-	int result;
-
-	switch (pdrv) {
-	case ATA :
-		// translate the arguments here
-
-		result = ATA_disk_write(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
-
-	case MMC :
-		// translate the arguments here
-
-		result = MMC_disk_write(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
-
-	case USB :
-		// translate the arguments here
-
-		result = USB_disk_write(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
-	}
-
-	return RES_PARERR;
+  uint8 res;
+  if(!count)return RES_PARERR;  // count不能为0，否则返回参数错误
+  
+  switch(pdrv)
+  {
+    case ExFLASH://外部flash
+      while(count--)
+      {
+        HalExtFlashBufferWrite((uint8 *)buff,sector*FLASH_SECTOR_SIZE,FLASH_SECTOR_SIZE);
+        sector++;
+        buff += FLASH_SECTOR_SIZE;
+      }
+      res = 0;
+      break;
+    default:
+      res = 1;
+  }
+  
+  // 处理返回值
+  if(res == 0x00) return RES_OK;
+  else return RES_ERROR;
 }
 
 
@@ -200,29 +138,33 @@ DRESULT disk_ioctl (
 	void *buff		/* Buffer to send/receive control data */
 )
 {
-	DRESULT res;
-	int result;
-
-	switch (pdrv) {
-	case ATA :
-
-		// Process of the command for the ATA drive
-
-		return res;
-
-	case MMC :
-
-		// Process of the command for the MMC/SD card
-
-		return res;
-
-	case USB :
-
-		// Process of the command the USB drive
-
-		return res;
-	}
-
-	return RES_PARERR;
+  DRESULT res;
+  if( pdrv == ExFLASH)
+  {
+    switch(cmd)
+    {
+      case CTRL_SYNC:
+        res = RES_OK; 
+        break;	 
+      case GET_SECTOR_SIZE:
+        *(WORD*)buff = FLASH_SECTOR_SIZE;
+        res = RES_OK;
+        break;	 
+    case GET_BLOCK_SIZE:
+      *(WORD*)buff = FLASH_BLOCK_SIZE;
+      res = RES_OK;
+      break;	 
+    case GET_SECTOR_COUNT:
+      *(DWORD*)buff = FLASH_SECTOR_COUNT;
+      res = RES_OK;
+      break;
+    default:
+      res = RES_PARERR;
+      break;
+    }
+  }
+  else res = RES_ERROR; //其他的不支持
+  
+  return res;
 }
 

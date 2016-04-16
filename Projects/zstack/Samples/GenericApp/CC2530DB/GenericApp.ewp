@@ -3192,6 +3192,27 @@
     </file>
   </group>
   <group>
+    <name>Fatfs</name>
+    <file>
+      <name>$PROJ_DIR$\..\..\..\..\..\Components\fatfs\src\diskio.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\..\..\..\Components\fatfs\src\diskio.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\..\..\..\Components\fatfs\src\ff.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\..\..\..\Components\fatfs\src\ff.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\..\..\..\Components\fatfs\src\ffconf.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\..\..\..\Components\fatfs\src\integer.h</name>
+    </file>
+  </group>
+  <group>
     <name>HAL</name>
     <group>
       <name>Common</name>
