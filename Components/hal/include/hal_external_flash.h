@@ -36,6 +36,7 @@
   Should you have any questions regarding your right to use this Software,
   contact kylinnevercry@gami.com. 
   使用SST25FV016B 芯片作为外置FALSH 16Mbit=2MB
+  还是不能用文件系统，RAM不够用，存不了要擦除的4KB
 **************************************************************************************************/
 
 #ifndef HAL_EXTERNAL_FLASH_H
