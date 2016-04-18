@@ -377,7 +377,7 @@ void GenericApp_HandleKeys( byte shift, byte keys )
 {
   uint8 a;
   uint8 buffer[512];
-  uint8 buffer1[6] = {0x00,0x01,0x02,0x04,0x05,0x06};
+  uint8 buffer1[6] = {0x10,0x11,0x12,0x14,0x15,0x16};
   if(keys & HAL_KEY_SW_6)
   {
     HalOledShowNum(0,0,_NIB.nwkPanId,5,16);

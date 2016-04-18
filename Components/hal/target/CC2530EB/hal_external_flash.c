@@ -43,6 +43,7 @@
  ***************************************************************************************************/
 #include "hal_external_flash.h"
 #include "hal_spi_user.h"
+#include "OSAL.h"
 
 #if (defined HAL_EXTERNAL_FLASH) && (HAL_EXTERNAL_FLASH == TRUE)
 /***************************************************************************************************
@@ -77,6 +78,7 @@
 /**************************************************************************************************
  *                                        INNER GLOBAL VARIABLES
  **************************************************************************************************/
+
 
 /**************************************************************************************************
  *                                        FUNCTIONS - Local
@@ -163,8 +165,10 @@ void HalExtFlashBufferWrite(uint8* writeBuffer,uint32 writeAddress,uint16 writeL
   uint16 secPos;
   uint16 secOff;
   uint16 secRemain;
-  uint8 SPI_FLASH_BUF[4096];
   uint16 i;
+  uint8 *SPI_FLASH_BUF = (uint8 *)osal_mem_alloc( sizeof(uint8) * 512 );
+  if( SPI_FLASH_BUF == NULL )
+    return;
   
   secPos = writeAddress/4096; // 扇区地址 0~511
   secOff = writeAddress%4096; // 在扇区内偏移
@@ -181,7 +185,7 @@ void HalExtFlashBufferWrite(uint8* writeBuffer,uint32 writeAddress,uint16 writeL
     }
     if( i < secRemain ) // 需要擦除
     {
-      HalExtFlash4KSectorErase(secPos); // 擦除这个扇区
+      HalExtFlash4KSectorErase(secPos*4096); // 擦除这个扇区
       for(i = 0; i < secRemain; i++ ) // 复制数据
         SPI_FLASH_BUF[secOff + i] = writeBuffer[i];
       HalExtFlashBufferWriteNoCheck(writeBuffer,secPos*4096,4096);  // 写入整个扇区
@@ -201,6 +205,9 @@ void HalExtFlashBufferWrite(uint8* writeBuffer,uint32 writeAddress,uint16 writeL
       else secRemain = writeLength; // 下一个扇区能够写完
     }
   }
+  
+  // free
+  osal_mem_free(SPI_FLASH_BUF);
 }
 
 
