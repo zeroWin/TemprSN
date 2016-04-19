@@ -55,7 +55,11 @@ extern "C"
 /***************************************************************************************************
  *                                              TYPEDEFS
  ***************************************************************************************************/
-
+typedef struct
+{
+  uint8 reservation;
+  
+} ExtFlashStruct_t;
 
 /**************************************************************************************************
  *                                              MACROS
@@ -108,6 +112,16 @@ extern void HalExtFlashByteWrite(uint32 writeAddress,uint8 writeData);
  * PS:writeLength 必须是偶数也就是说必须发送偶数个数据
  */
 extern void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeLength);
+
+/*
+ * Wrtie sample data to flash
+ */  
+extern void HalExtFlashDataWrite(ExtFlashStruct_t ExtFlashStruct);
+
+/*
+ * Read sample data from flash
+ */  
+extern ExtFlashStruct_t HalExtFlashDataRead(void);
 
 
 #ifdef __cplusplus

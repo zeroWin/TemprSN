@@ -66,6 +66,7 @@
 #define F_EBSY_COMMAND                  0x70    // Enable SO to output RY/BY# status during AAI programming
 #define F_DBSY_COMMAND                  0x80    // Disable SO to output RY/BY# status during AAI programming
 
+#define F_INFO_VERIFI                   0xAA55BCDE  // verification info  低位先写入
 /***************************************************************************************************
  *                                              MACROS
  ***************************************************************************************************/
@@ -77,7 +78,9 @@
 /**************************************************************************************************
  *                                        INNER GLOBAL VARIABLES
  **************************************************************************************************/
-
+ uint16 sectorEnd;    // 记录sector用到了第几个 1-511 第0个sector留给系统信息用
+ uint16 sectorPos;    // 记录最后一个sector的偏移     0-4095
+  
 /**************************************************************************************************
  *                                        FUNCTIONS - Local
  **************************************************************************************************/
@@ -95,6 +98,11 @@ void HalExtFlash64KBlockErase(uint32 addr);
 void HalExtFlash32KBlockErase(uint32 addr);
 void HalExtFlash4KSectorErase(uint32 addr);
 void HalExtFlashWaitWriteEnd(void);
+
+void HalExtFlashInfoWrite(void);
+uint32 HalExtFlashInfoRead(void);
+void HalExtFlashDataLenWrite(uint16 sectorEndTemp,uint16 sectorPosTemp);
+void HalExtFlashDataLenRead(uint16 *sectorEndTemp,uint16 *sectorPosTemp);
 /**************************************************************************************************
  *                                        FUNCTIONS - API
  **************************************************************************************************/
@@ -110,10 +118,147 @@ void HalExtFlashWaitWriteEnd(void);
  * @return  None
  **************************************************************************************************/
 void HalExtFlashInit(void)
-{
+{  
   // close all block protection
   HalExtFlashWriteStatusRegister(0x00);
-  //HalExtFlashChipErase();
+  // 读取flash中的数据
+  // 0-3 预留信息,用于校验flash数据是否有问题
+  // 4-5 sectorEnd 低位在前
+  // 6-7 sectorPos 低位在前
+  if( HalExtFlashInfoRead() != F_INFO_VERIFI)
+  {
+    // 预留信息不对，全片擦除
+    HalExtFlashChipErase();
+    // 写入预留校验信息
+    HalExtFlashInfoWrite();
+    
+    sectorEnd = 1;
+    sectorPos = 0;
+    
+    // 写入初始长度
+    HalExtFlashDataLenWrite(sectorEnd,sectorPos);
+  }
+  else  // 预留信息正确
+  {
+    // 读取数据长度
+    HalExtFlashDataLenRead(&sectorEnd,&sectorPos);
+  }
+
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashDataWrite
+ *
+ * @brief   write data to flash
+ *
+ * @param   ExtFlashStruct_t
+ *
+ * @return  none
+ **************************************************************************************************/
+void HalExtFlashDataWrite(ExtFlashStruct_t ExtFlashStruct)
+{
+  
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashDataRead
+ *
+ * @brief   Read data from flash
+ *
+ * @param   none
+ *
+ * @return  ExtFlashStruct_t
+ **************************************************************************************************/
+ExtFlashStruct_t HalExtFlashDataRead(void)
+{
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashDataLenWrite
+ *
+ * @brief   write dataLength to flash
+ *
+ * @param   uint16 sectorEndTemp:which sector 1-511
+ *          uint16 sectorPosTemp:0-4095
+ *
+ * @return  none
+ **************************************************************************************************/
+void HalExtFlashDataLenWrite(uint16 sectorEndTemp,uint16 sectorPosTemp)
+{
+  uint8 sectorEndPosBuffer[4];
+  sectorEndPosBuffer[0] = sectorEndTemp & 0xFF;
+  sectorEndPosBuffer[1] = (sectorEndTemp & 0xFF00) >> 8;
+  sectorEndPosBuffer[2] = sectorPosTemp & 0xFF;
+  sectorEndPosBuffer[3] = (sectorPosTemp & 0xFF00) >> 8;
+  HalExtFlashBufferWrite(sectorEndPosBuffer,0x000004,4);
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashDataLenRead
+ *
+ * @brief   Read dataLength from flash
+ *
+ * @param   uint16 sectorEndTemp:which sector 1-511
+ *          uint16 sectorPosTemp:0-4095
+ *
+ * @return  none
+ **************************************************************************************************/
+void HalExtFlashDataLenRead(uint16 *sectorEndTemp,uint16 *sectorPosTemp)
+{
+  uint8 sectorEndPosBuffer[4];
+  
+  HalExtFlashBufferRead(sectorEndPosBuffer,0x000004,4);
+  
+  *sectorEndTemp = ((uint16)sectorEndPosBuffer[1] << 8 | sectorEndPosBuffer[0] );
+  *sectorPosTemp = ((uint16)sectorEndPosBuffer[3] << 8 | sectorEndPosBuffer[2] );
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashInfoWrite
+ *
+ * @brief   write verification info to flash
+ *
+ * @param   none
+ *
+ * @return  none
+ **************************************************************************************************/
+void HalExtFlashInfoWrite(void)
+{
+  uint8 sectorInfoBuffer[4];
+  
+  sectorInfoBuffer[0] = 0xDE;
+  sectorInfoBuffer[1] = 0xBC;
+  sectorInfoBuffer[2] = 0x55;
+  sectorInfoBuffer[3] = 0xAA;
+  
+  HalExtFlashBufferWrite(sectorInfoBuffer,0x000000,4);
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashInfoRead
+ *
+ * @brief   Read verification info from flash
+ *
+ * @param   none
+ *
+ * @return  none
+ **************************************************************************************************/
+uint32 HalExtFlashInfoRead(void)
+{
+  uint8 sectorInfoBuffer[4];
+  uint32 verifiInfo;
+  
+  HalExtFlashBufferRead(sectorInfoBuffer,0x000000,4);
+  verifiInfo = ((uint32)sectorInfoBuffer[3] << 24) | 
+               ((uint32)sectorInfoBuffer[2] << 16) | 
+               ((uint32)sectorInfoBuffer[1] << 8) | sectorInfoBuffer[0];// 低位在前
+  return verifiInfo;
 }
 
 
