@@ -83,9 +83,14 @@
 
 #define HAL_UART_PERCFG_BIT        0x01         // USART0 on P0, Alt-1; so clear this bit.
 
-/* SPI CE is at P0.6 */
-#define HAL_SPI_CE_PORT  0
-#define HAL_SPI_CE_PIN   6
+/* Flash SPI CE is at P0.6 */
+#define HAL_FLASH_SPI_CE_PORT  0
+#define HAL_FLASH_SPI_CE_PIN   6
+
+/* AD7793 SPI CE is at P0.4 */
+#define HAL_AD7793_SPI_CE_PORT  0
+#define HAL_AD7793_SPI_CE_PIN   4
+
 
 /* SPI SCLK,MO,MI is at P0.5,P0.3,P0,2 */
 #define HAL_SPI_SCLK_MO_MI             0x2C
@@ -104,8 +109,12 @@
 /***************************************************************************************************
  *                                              MACROS
  ***************************************************************************************************/
-#define HAL_SPI_FLASH_ENABLE()      MCU_IO_OUTPUT(HAL_SPI_CE_PORT, HAL_SPI_CE_PIN, 0)
-#define HAL_SPI_FLASH_DISABLE()     MCU_IO_OUTPUT(HAL_SPI_CE_PORT, HAL_SPI_CE_PIN, 1)
+#define HAL_SPI_FLASH_ENABLE()      MCU_IO_OUTPUT(HAL_FLASH_SPI_CE_PORT, HAL_FLASH_SPI_CE_PIN, 0)
+#define HAL_SPI_FLASH_DISABLE()     MCU_IO_OUTPUT(HAL_FLASH_SPI_CE_PORT, HAL_FLASH_SPI_CE_PIN, 1)
+
+#define HAL_SPI_AD7793_ENABLE()      MCU_IO_OUTPUT(HAL_AD7793_SPI_CE_PORT, HAL_AD7793_SPI_CE_PIN, 0)
+#define HAL_SPI_AD7793_DISABLE()     MCU_IO_OUTPUT(HAL_AD7793_SPI_CE_PORT, HAL_AD7793_SPI_CE_PIN, 1)
+
 #define HAL_SPI_TX(x)               st(UxCSR &= ~CSR_TX_BYTE; UxDBUF = (x);)
 #define HAL_SPI_RX()                UxDBUF
 #define HAL_SPI_WAIT_RXRDY()        st(while (!(UxCSR & CSR_TX_BYTE));) //发送完，接收就完了。
@@ -144,6 +153,10 @@ void HalSpiUInit(void)
   /* Set bit order to MSB */
   UxGCR |= BV(5); 
   
+  /* USE SPI MODE3 */
+  UxGCR |= BV(6);
+  UxGCR |= BV(7);
+  
   /* Set UART0 I/O to alternate 1 location on P0 pins. */
   PERCFG &= ~HAL_UART_PERCFG_BIT;  /* U0CFG */
   
@@ -156,8 +169,9 @@ void HalSpiUInit(void)
   /* When SPI config is complete, enable it. */
   UxCSR |= CSR_RE; 
 
-  /* Release XNV reset. */
+  /* Release XNV reset.AD7793 reset */
   HAL_SPI_FLASH_DISABLE(); 
+  HAL_SPI_AD7793_DISABLE();
 }
 
 
@@ -225,6 +239,36 @@ void HalSpiFlashDisable(void)
   HAL_SPI_FLASH_DISABLE();
 }
 
+
+/**************************************************************************************************
+ * @fn      HalSpiAD7793Enable
+ *
+ * @brief   Enable AD7793 Deivce.CE=0
+ *
+ * @param  
+ *
+ * @return  
+ **************************************************************************************************/
+void HalSpiAD7793Enable(void)
+{
+  HAL_SPI_AD7793_ENABLE();
+}
+
+
+/**************************************************************************************************
+ * @fn      HalSpiAD7793Disable
+ *
+ * @brief   Enable AD7793 Deivce.CE=1
+ *
+ * @param  
+ *
+ * @return  
+ **************************************************************************************************/
+void HalSpiAD7793Disable(void)
+{
+  HAL_SPI_AD7793_DISABLE();
+}
+
 #else
 
 void HalSpiUInit(void);
@@ -232,5 +276,7 @@ void HalSpiFlashEnable(void);
 void HalSpiFlashDisable(void);
 uint8 HalSpiWriteByte(void);
 uint8 HalSpiReadByte(void);
+void HalSpiAD7793Enable(void);
+void HalSpiAD7793Disable(void);
 
 #endif

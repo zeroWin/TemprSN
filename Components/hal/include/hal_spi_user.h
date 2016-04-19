@@ -95,6 +95,17 @@ extern void HalSpiFlashEnable(void);
  */
 extern void HalSpiFlashDisable(void);
 
+/*
+ * Enable AD7793 Deivce.CE=0
+ */
+extern void HalSpiAD7793Enable(void);
+
+/*
+ * Disable AD7793 Deivce.CE=1
+ */
+extern void HalSpiAD7793Disable(void);
+
+
 #ifdef __cplusplus
 }
 #endif  
