@@ -445,6 +445,11 @@ st( \
 #define HAL_OLED TRUE
 #endif
 
+/* Set to TRUE enable batter monitor usage, FALSE disable it */
+#ifndef HAL_BATTERY_MONITOR
+#define HAL_BATTERY_MONITOR TRUE
+#endif
+
 /* Set to TRUE enable LED usage, FALSE disable it */
 #ifndef HAL_LED
 #define HAL_LED FALSE

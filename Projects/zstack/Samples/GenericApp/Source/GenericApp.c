@@ -64,6 +64,7 @@
 #include "hal_uart.h"
 #include "hal_oled.h"
 #include "hal_external_flash.h"
+#include "hal_battery_monitor.h"
 
 #include "string.h"
 /*********************************************************************
@@ -373,12 +374,14 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
  */
 void GenericApp_HandleKeys( byte shift, byte keys )
 {
-
+  float BatterVol;
   if(keys & HAL_KEY_SW_6)
   {
     HalOledShowNum(0,0,_NIB.nwkPanId,5,16);
     HalOledShowNum(50,0,_NIB.nwkDevAddress,5,16);  
     HalOledShowNum(0,15,_NIB.nwkCoordAddress,1,16);
+    
+    BatterVol = HalGetBattVol();
 
   }
   if(keys & HAL_KEY_SW_7)

@@ -3211,6 +3211,9 @@
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_assert.h</name>
       </file>
       <file>
+        <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_battery_monitor.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_board.h</name>
       </file>
       <file>
@@ -3267,6 +3270,9 @@
           <name>Drivers</name>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_adc.c</name>
+          </file>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_battery_monitor.c</name>
           </file>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_dma.c</name>

@@ -53,6 +53,7 @@
 #include "hal_led.h"
 #include "hal_oled.h"
 #include "hal_external_flash.h"
+#include "hal_battery_monitor.h"
 #include "hal_spi_user.h"
 #include "hal_timer.h"
 #include "hal_uart.h"
@@ -160,6 +161,11 @@ void HalDriverInit (void)
   HalOledInit();
 #endif
 
+  /* Battery Monitor */
+#if (defined HAL_BATTERY_MONITOR) && (HAL_BATTERY_MONITOR == TRUE)
+  HalBattMonInit();
+#endif  
+  
   /* LED */
 #if (defined HAL_LED) && (HAL_LED == TRUE)
   HalLedInit();
