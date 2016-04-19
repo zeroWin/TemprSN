@@ -54,6 +54,7 @@
 #include "hal_oled.h"
 #include "hal_external_flash.h"
 #include "hal_battery_monitor.h"
+#include "hal_rtc_ds1302.h"
 #include "hal_spi_user.h"
 #include "hal_timer.h"
 #include "hal_uart.h"
@@ -165,6 +166,11 @@ void HalDriverInit (void)
 #if (defined HAL_BATTERY_MONITOR) && (HAL_BATTERY_MONITOR == TRUE)
   HalBattMonInit();
 #endif  
+ 
+  /* RTC DS1302 */
+#if (defined HAL_RTC_DS1302) && (HAL_RTC_DS1302 == TRUE)
+  //HalRTCInit();
+#endif
   
   /* LED */
 #if (defined HAL_LED) && (HAL_LED == TRUE)

@@ -259,6 +259,28 @@ extern void MAC_RfFrontendSetup(void);
 #define MCU_IO_DIR_INPUT_PREP(port, pin)    st( P##port##DIR &= ~BV(pin); )
 #define MCU_IO_DIR_OUTPUT_PREP(port, pin)   st( P##port##DIR |= BV(pin); )
 
+/* -----------define for P2.3,P2.4------------- */
+#define MCU_IO_OUTPUT_P2_34(port, pin, val) MCU_IO_OUTPUT_P2_34_PREP(port, pin, val)
+#define MCU_IO_INPUT_P2_34(port, pin, func) MCU_IO_INPUT_P2_34_PREP(port, pin, func)
+
+#define MCU_IO_OUTPUT_P2_34_PREP(port, pin, val)  st( P##port##SEL &= ~BV(pin-2); \
+                                                P##port##_##pin## = val; \
+                                                P##port##DIR |= BV(pin); )
+
+#define MCU_IO_INPUT_P2_34_PREP(port, pin, func)  st( P##port##SEL &= ~BV(pin-2); \
+                                                P##port##DIR &= ~BV(pin); \
+                                                switch (func) { \
+                                                case MCU_IO_PULLUP: \
+                                                    P##port##INP &= ~BV(pin); \
+                                                    P2INP &= ~BV(port + 5); \
+                                                    break; \
+                                                case MCU_IO_PULLDOWN: \
+                                                    P##port##INP &= ~BV(pin); \
+                                                    P2INP |= BV(port + 5); \
+                                                    break; \
+                                                default: \
+                                                    P##port##INP |= BV(pin); \
+                                                    break; } )
 /* ----------- Board Initialization ---------- */
 #if defined (HAL_BOARD_CC2530EB_REV17) && !defined (HAL_PA_LNA) && !defined (HAL_PA_LNA_CC2590)
 
@@ -448,6 +470,11 @@ st( \
 /* Set to TRUE enable batter monitor usage, FALSE disable it */
 #ifndef HAL_BATTERY_MONITOR
 #define HAL_BATTERY_MONITOR TRUE
+#endif
+
+/* Set to TRUE enable RTC DS1302 usage, FALSE disable it */
+#ifndef HAL_RTC_DS1302
+#define HAL_RTC_DS1302 TRUE
 #endif
 
 /* Set to TRUE enable LED usage, FALSE disable it */

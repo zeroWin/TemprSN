@@ -1,9 +1,9 @@
 /**************************************************************************************************
-  Filename:       hal_oled.h
-  Revised:        $Date: 2016-03-12 19:37:16 +0800 (Sat, 12 Mar 2016) $
+  Filename:       hal_rtc_ds1302.h
+  Revised:        $Date: 2016-04-07 15:20:16 +0800 (Tues, 7 Apr 2016) $
   Revision:       $Revision: 1 $
 
-  Description:    This file contains the interface to the OLED Service.
+  Description:    This file contains the interface to the RTC Service.
 
 
   Copyright 2016 Bupt. All rights reserved.
@@ -35,10 +35,11 @@
 
   Should you have any questions regarding your right to use this Software,
   contact kylinnevercry@gami.com. 
+  使用DS1302 芯片
 **************************************************************************************************/
 
-#ifndef HAL_OLED_H
-#define HAL_OLED_H
+#ifndef HAL_RTC_DS1302_H
+#define HAL_RTC_DS1302_H
 
 #ifdef __cplusplus
 extern "C"
@@ -50,58 +51,59 @@ extern "C"
  **************************************************************************************************/
 #include "hal_board.h"
 
+/***************************************************************************************************
+ *                                              TYPEDEFS
+ ***************************************************************************************************/
+typedef struct
+{
+  uint8 sec;      //00-59
+  uint8 min;      //00-59
+  uint8 hour;     //使用24小时模式 00-23
+  uint8 date;     //01-28/29 01-30 01-31
+  
+  uint8 month;    //01-12
+  uint8 week;     //01-07
+  uint8 year;     //00-99
+  uint8 WP;       //don't use
+} RTCStruct_t;
+
 /**************************************************************************************************
- * MACROS
+ *                                              MACROS
  **************************************************************************************************/
 
 /**************************************************************************************************
  *                                            CONSTANTS
  **************************************************************************************************/
-#define HAL_OLED_MODE_OFF 0x00 
-#define HAL_OLED_MODE_ON  0x01  
+#define RTC_DS1302_GET        0x00
+#define RTC_DS1302_SET        0x01
+ 
+#define RTC_REGISTER_SEC      0x00
+#define RTC_REGISTER_MIN      0x01
+#define RTC_REGISTER_HOUR     0x02
+#define RTC_REGISTER_DATE     0x03
+#define RTC_REGISTER_MONTH    0x04
+#define RTC_REGISTER_WEEK     0x05
+#define RTC_REGISTER_YEAR     0x06
   
 /**************************************************************************************************
  *                                             FUNCTIONS - API
  **************************************************************************************************/
-/*
- * Initialize OLED Service.
- */
-extern void HalOledInit(void);
 
 /*
- * Clear OLED.
+ * Initialize RTC Service.
  */
-extern void HalOledClear(void);
+extern void HalRTCInit(void);
 
 /*
- * Show a char on OLED.
+ * Set or Get DS1302 one register
  */
-extern void HalOledShowChar(uint8 x,uint8 y,uint8 chr,uint8 size,uint8 mode);
+extern void HalRTCGetOrSet(uint8 getOrSetFlag,uint8 registerName,uint8 *value);
+
 
 /*
- * Show a num on OLED.
+ * Set or Get DS1302 all register
  */
-extern void HalOledShowNum(uint8 x,uint8 y,uint32 num,uint8 len,uint8 size);
-
-/*
- * Show string on OLED.
- */
-extern void HalOledShowString(uint8 x,uint8 y,uint8 size,const uint8 *p);  
-  
-/*
- * Refresh OLED.
- */
-extern void HalOledRefreshGram(void);
-
-/*
- * Set the OLED ON/OFF.
- */
-extern void HalOledOnOff(uint8 mode);
-  
-/*
- * Delay function.
- */
-extern void halMcuWaitUs(uint16 microSecs); 
+extern void HalRTCGetOrSetFull(uint8 getOrSetFlag, RTCStruct_t *RTCStruct);
 
 #ifdef __cplusplus
 }

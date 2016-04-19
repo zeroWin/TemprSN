@@ -65,6 +65,7 @@
 #include "hal_oled.h"
 #include "hal_external_flash.h"
 #include "hal_battery_monitor.h"
+#include "hal_rtc_ds1302.h"
 
 #include "string.h"
 /*********************************************************************
@@ -185,12 +186,12 @@ void GenericApp_Init( byte task_id )
 
   // Register for all key events - This app will handle all key events
   RegisterForKeys( GenericApp_TaskID );
-
+  
   // Update the display
 #if defined ( LCD_SUPPORTED )
     HalLcdWriteString( "GenericApp", HAL_LCD_LINE_1 );
 #endif
-
+HalRTCInit();
   ZDO_RegisterForZDOMsg( GenericApp_TaskID, End_Device_Bind_rsp );
   ZDO_RegisterForZDOMsg( GenericApp_TaskID, Match_Desc_rsp );
 }
@@ -374,19 +375,20 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
  */
 void GenericApp_HandleKeys( byte shift, byte keys )
 {
-  float BatterVol;
+  uint8 a = 23;
   if(keys & HAL_KEY_SW_6)
   {
     HalOledShowNum(0,0,_NIB.nwkPanId,5,16);
     HalOledShowNum(50,0,_NIB.nwkDevAddress,5,16);  
     HalOledShowNum(0,15,_NIB.nwkCoordAddress,1,16);
     
-    BatterVol = HalGetBattVol();
 
+    HalRTCGetOrSet(RTC_DS1302_SET,RTC_REGISTER_SEC,&a);
   }
   if(keys & HAL_KEY_SW_7)
   {
     HalOledShowChar(0,0,'b',12,1);
+    HalRTCGetOrSet(RTC_DS1302_GET,RTC_REGISTER_SEC,&a);
   }
 
   HalOledRefreshGram();
