@@ -56,6 +56,7 @@
 #include "hal_battery_monitor.h"
 #include "hal_rtc_ds1302.h"
 #include "hal_spi_user.h"
+#include "hal_AD7793.h"
 #include "hal_timer.h"
 #include "hal_uart.h"
 #include "hal_sleep.h"
@@ -195,6 +196,11 @@ void HalDriverInit (void)
   /* External flash */
 #if (defined HAL_EXTERNAL_FLASH) && (HAL_EXTERNAL_FLASH == TRUE)
   HalExtFlashInit();
+#endif 
+  
+  /* AD7793 */
+#if (defined HAL_AD7793) && (HAL_AD7793 == TRUE)
+  HalAD7793Init();
 #endif 
   
   /* SPI */

@@ -3205,6 +3205,9 @@
     <group>
       <name>Include</name>
       <file>
+        <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_AD7793.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_adc.h</name>
       </file>
       <file>
@@ -3271,6 +3274,9 @@
         </group>
         <group>
           <name>Drivers</name>
+          <file>
+            <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_AD7793.c</name>
+          </file>
           <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_adc.c</name>
           </file>

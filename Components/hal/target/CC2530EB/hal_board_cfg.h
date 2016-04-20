@@ -500,6 +500,11 @@ st( \
 #define HAL_EXTERNAL_FLASH TRUE
 #endif
 
+/* Set to TRUE enable AD7793 usage, FALSE disable it */
+#ifndef HAL_AD7793
+#define HAL_AD7793 TRUE
+#endif
+
 /* Set to TRUE enable UART usage, FALSE disable it */
 #ifndef HAL_UART
 #if (defined ZAPP_P1) || (defined ZAPP_P2) || (defined ZTOOL_P1) || (defined ZTOOL_P2)
