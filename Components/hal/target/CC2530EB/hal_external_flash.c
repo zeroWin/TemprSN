@@ -78,9 +78,11 @@
 /**************************************************************************************************
  *                                        INNER GLOBAL VARIABLES
  **************************************************************************************************/
- uint16 sectorEnd;    // 记录sector用到了第几个 1-511 第0个sector留给系统信息用
- uint16 sectorPos;    // 记录最后一个sector的偏移     0-4095
+uint16 sectorWriteEnd;    // 记录sector用到了第几个 1-511 第0个sector留给系统信息用
+uint16 sectorWritePos;    // 记录最后一个sector的偏移     0-4095
   
+uint16 sectorReadEnd;    // 记录sector用到了第几个 1-511 第0个sector留给系统信息用
+uint16 sectorReadPos;    // 记录最后一个sector的偏移     0-4095
 /**************************************************************************************************
  *                                        FUNCTIONS - Local
  **************************************************************************************************/
@@ -101,8 +103,14 @@ void HalExtFlashWaitWriteEnd(void);
 
 void HalExtFlashInfoWrite(void);
 uint32 HalExtFlashInfoRead(void);
-void HalExtFlashDataLenWrite(uint16 sectorEndTemp,uint16 sectorPosTemp);
-void HalExtFlashDataLenRead(uint16 *sectorEndTemp,uint16 *sectorPosTemp);
+void HalExtFlashDataLenWrite(uint16 sectorWriteEndTemp,uint16 sectorWritePosTemp);
+void HalExtFlashDataLenRead(uint16 *sectorWriteEndTemp,uint16 *sectorWritePosTemp);
+
+void HalExtFlashRTCWrite(RTCStruct_t *RTCStruct,uint32 addr);
+void HalExtFlashRTCRead(RTCStruct_t *RTCStruct,uint32 addr);
+
+void HalExtFlashSampleRead(uint8 *SampleData,uint32 addr);
+void HalExtFlashSampleWrite(uint8 *SampleData,uint32 addr);
 /**************************************************************************************************
  *                                        FUNCTIONS - API
  **************************************************************************************************/
@@ -121,10 +129,11 @@ void HalExtFlashInit(void)
 {  
   // close all block protection
   HalExtFlashWriteStatusRegister(0x00);
+
   // 读取flash中的数据
   // 0-3 预留信息,用于校验flash数据是否有问题
-  // 4-5 sectorEnd 低位在前
-  // 6-7 sectorPos 低位在前
+  // 4-5 sectorWriteEnd 低位在前
+  // 6-7 sectorWritePos 低位在前
   if( HalExtFlashInfoRead() != F_INFO_VERIFI)
   {
     // 预留信息不对，全片擦除
@@ -132,16 +141,20 @@ void HalExtFlashInit(void)
     // 写入预留校验信息
     HalExtFlashInfoWrite();
     
-    sectorEnd = 1;
-    sectorPos = 0;
+    sectorWriteEnd = 1;
+    sectorWritePos = 0;
     
+    sectorReadEnd = 1;
+    sectorReadPos = 0;
     // 写入初始长度
-    HalExtFlashDataLenWrite(sectorEnd,sectorPos);
+    HalExtFlashDataLenWrite(sectorWriteEnd,sectorWritePos);
   }
   else  // 预留信息正确
   {
     // 读取数据长度
-    HalExtFlashDataLenRead(&sectorEnd,&sectorPos);
+    HalExtFlashDataLenRead(&sectorWriteEnd,&sectorWritePos);
+    sectorReadEnd = sectorWriteEnd;
+    sectorReadPos = sectorWritePos;
   }
 
 }
@@ -158,6 +171,32 @@ void HalExtFlashInit(void)
  **************************************************************************************************/
 void HalExtFlashDataWrite(ExtFlashStruct_t ExtFlashStruct)
 {
+  // 计算写入地址
+  uint32 writeAddress = sectorWriteEnd*4096 + sectorWritePos;
+  
+  // write RTC and sample data
+  HalExtFlashRTCWrite(&(ExtFlashStruct.RTCStruct),writeAddress); // 写入8BYTE 时间
+  HalExtFlashSampleWrite(ExtFlashStruct.sampleData,writeAddress+8); // 写入2BYTE 采集数据
+  
+  // 更新写入的地址
+  sectorWritePos += 10;
+  if(sectorWritePos > 4095) // 该扇区用完，进入下一个扇区
+  {
+    sectorWriteEnd++;
+    sectorWritePos = sectorWritePos - 4096;
+  }
+  
+  /* 更新flash中数据信息 */
+  // 擦除首页信息内容
+  HalExtFlash4KSectorErase(0x000000);
+  // 更新flash中写入地址
+  HalExtFlashDataLenWrite(sectorWriteEnd,sectorWritePos);
+  // 写入信息校验信息到flash
+  HalExtFlashInfoWrite();
+  
+  /* 每当写入都更新读取地址 */
+  sectorReadEnd = sectorWriteEnd;
+  sectorReadPos = sectorWritePos;
   
 }
 
@@ -166,13 +205,118 @@ void HalExtFlashDataWrite(ExtFlashStruct_t ExtFlashStruct)
  * @fn      HalExtFlashDataRead
  *
  * @brief   Read data from flash
+ *          只有当一个扇区被全部读取，才进行flash中的数据擦除.
+ *          如果没有完全读取，说明同步出了问题，下次同步继续从头开始同步
+ *          主要原因是flash最小也需要擦除4K的空间
  *
  * @param   none
  *
- * @return  ExtFlashStruct_t
+ * @return  0:data invalid 
+            1:data effective
  **************************************************************************************************/
-ExtFlashStruct_t HalExtFlashDataRead(void)
+uint8 HalExtFlashDataRead(ExtFlashStruct_t *ExtFlashStruct)
 {
+  // 计算读取地址
+  uint32 readAddress = sectorReadEnd*4096 + sectorReadPos - 10;
+  if( readAddress < 4096 )
+    return DATA_READ_INVALID;
+  
+  // Read RTC and sample data
+  HalExtFlashRTCRead(&(ExtFlashStruct->RTCStruct),readAddress); // 读取8BYTE 时间
+  HalExtFlashSampleRead(ExtFlashStruct->sampleData,readAddress+8); // 读取2BYTE 采集数据 
+  
+  // 更新读取写入
+  if(sectorReadPos > 10)  // 该扇区没读完
+  {
+    sectorReadPos -= 10;
+  }
+  else  // 该扇区读完 
+  {
+    if(sectorReadPos == 10)
+      sectorReadPos = 0;
+    else
+    {
+      sectorReadEnd--;
+      sectorReadPos = 4095 - (9 - sectorReadPos);
+    }
+    // 擦除读完的扇区
+    HalExtFlash4KSectorErase(sectorWriteEnd*4096);
+    /* 更新缓存中写地址 */
+    sectorWriteEnd = sectorReadEnd;
+    sectorWritePos = sectorReadPos;
+   
+    /* 更新flash中数据信息 */
+    // 擦除首页信息内容
+    HalExtFlash4KSectorErase(0x000000);
+    // 更新flash中写入地址
+    HalExtFlashDataLenWrite(sectorWriteEnd,sectorWritePos);
+    // 写入信息校验信息到flash
+    HalExtFlashInfoWrite();  
+  }
+  
+  return DATA_READ_EFFECTIVE;
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashSampleWrite
+ *
+ * @brief   Write Sample data to flash 2Byte
+ *
+ * @param   SampleData: 体温，低位是小数部分，高位是整数部分
+ *
+ * @return  none
+ **************************************************************************************************/
+void HalExtFlashSampleWrite(uint8 *SampleData,uint32 addr)
+{
+  HalExtFlashBufferWrite(SampleData,addr,2);
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashSampleRead 
+ *
+ * @brief   Read Sample data from flash 2Byte
+ *
+ * @param   SampleData: 体温，低位是小数部分，高位是整数部分
+ *
+ * @return  none
+ **************************************************************************************************/
+void HalExtFlashSampleRead(uint8 *SampleData,uint32 addr)
+{
+  HalExtFlashBufferRead(SampleData,addr,2);
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashRTCWrite
+ *
+ * @brief   Write RTC time to flash 8BYTE
+ *
+ * @param   RTCStruct_t *RTCStrcut:time struct
+ *          addr:write address
+ *
+ * @return  none
+ **************************************************************************************************/
+void HalExtFlashRTCWrite(RTCStruct_t *RTCStruct,uint32 addr)
+{
+  HalExtFlashBufferWrite((uint8 *)RTCStruct,addr,8);
+}
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashRTCRead
+ *
+ * @brief   Read RTC time from flash 8BYTE
+ *
+ * @param   RTCStruct_t *RTCStrcut:time struct
+ *          addr:read address
+ *
+ * @return  RTCStruct_t RTCStrcut:time struct
+ **************************************************************************************************/
+void HalExtFlashRTCRead(RTCStruct_t *RTCStruct,uint32 addr)
+{
+  HalExtFlashBufferRead((uint8 *)RTCStruct,addr,8);
 }
 
 
@@ -181,19 +325,19 @@ ExtFlashStruct_t HalExtFlashDataRead(void)
  *
  * @brief   write dataLength to flash
  *
- * @param   uint16 sectorEndTemp:which sector 1-511
- *          uint16 sectorPosTemp:0-4095
+ * @param   uint16 sectorWriteEndTemp:which sector 1-511
+ *          uint16 sectorWritePosTemp:0-4095
  *
  * @return  none
  **************************************************************************************************/
-void HalExtFlashDataLenWrite(uint16 sectorEndTemp,uint16 sectorPosTemp)
+void HalExtFlashDataLenWrite(uint16 sectorWriteEndTemp,uint16 sectorWritePosTemp)
 {
-  uint8 sectorEndPosBuffer[4];
-  sectorEndPosBuffer[0] = sectorEndTemp & 0xFF;
-  sectorEndPosBuffer[1] = (sectorEndTemp & 0xFF00) >> 8;
-  sectorEndPosBuffer[2] = sectorPosTemp & 0xFF;
-  sectorEndPosBuffer[3] = (sectorPosTemp & 0xFF00) >> 8;
-  HalExtFlashBufferWrite(sectorEndPosBuffer,0x000004,4);
+  uint8 sectorWriteEndPosBuffer[4];
+  sectorWriteEndPosBuffer[0] = sectorWriteEndTemp & 0xFF;
+  sectorWriteEndPosBuffer[1] = (sectorWriteEndTemp & 0xFF00) >> 8;
+  sectorWriteEndPosBuffer[2] = sectorWritePosTemp & 0xFF;
+  sectorWriteEndPosBuffer[3] = (sectorWritePosTemp & 0xFF00) >> 8;
+  HalExtFlashBufferWrite(sectorWriteEndPosBuffer,0x000004,4);
 }
 
 
@@ -202,19 +346,19 @@ void HalExtFlashDataLenWrite(uint16 sectorEndTemp,uint16 sectorPosTemp)
  *
  * @brief   Read dataLength from flash
  *
- * @param   uint16 sectorEndTemp:which sector 1-511
- *          uint16 sectorPosTemp:0-4095
+ * @param   uint16 sectorWriteEndTemp:which sector 1-511
+ *          uint16 sectorWritePosTemp:0-4095
  *
  * @return  none
  **************************************************************************************************/
-void HalExtFlashDataLenRead(uint16 *sectorEndTemp,uint16 *sectorPosTemp)
+void HalExtFlashDataLenRead(uint16 *sectorWriteEndTemp,uint16 *sectorWritePosTemp)
 {
-  uint8 sectorEndPosBuffer[4];
+  uint8 sectorWriteEndPosBuffer[4];
   
-  HalExtFlashBufferRead(sectorEndPosBuffer,0x000004,4);
+  HalExtFlashBufferRead(sectorWriteEndPosBuffer,0x000004,4);
   
-  *sectorEndTemp = ((uint16)sectorEndPosBuffer[1] << 8 | sectorEndPosBuffer[0] );
-  *sectorPosTemp = ((uint16)sectorEndPosBuffer[3] << 8 | sectorEndPosBuffer[2] );
+  *sectorWriteEndTemp = ((uint16)sectorWriteEndPosBuffer[1] << 8 | sectorWriteEndPosBuffer[0] );
+  *sectorWritePosTemp = ((uint16)sectorWriteEndPosBuffer[3] << 8 | sectorWriteEndPosBuffer[2] );
 }
 
 
@@ -329,7 +473,7 @@ void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeL
   }
   
   HalExtFlashWriteDisable();    //write disable
-  while((HalExtFlashReadStatusRegister() & 0x03) != 0x00 ); // wait close
+  HalExtFlashWaitWriteEnd();    // wait for write end // wait close
 }
 
 
@@ -693,6 +837,30 @@ void HalExtFlashSendAddr(uint32 Addr)
   HalSpiWriteByte((Addr & 0xFF00) >> 8);
   HalSpiWriteByte((Addr & 0xFF));
 }
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashSendAddr
+ *
+ * @brief   Send 24byte address
+ *
+ * @param   addr - 0x000000 to 0x1FFFFF = 2MB的地址
+ *
+ * @return  
+ **************************************************************************************************/
+void HalExtFlashReset(void)
+{
+  HalExtFlashChipErase();
+  
+  // 写入预留校验信息
+  HalExtFlashInfoWrite();
+    
+  sectorWriteEnd = 1;
+  sectorWritePos = 0;
+    
+  // 写入初始长度
+  HalExtFlashDataLenWrite(sectorWriteEnd,sectorWritePos);  
+}
 #else
 
 void HalExtFlashInit(void);
@@ -702,5 +870,9 @@ void HalExtFlashBufferRead(uint8 *pBuffer,uint32 readAddress,uint16 readLength);
 uint8 HalExtFlashByteRead(uint32 readAddress);
 
 void HalExtFlashByteWrite(uint32 writeAddress,uint8 writeData);
-void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeLength)
+void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeLength);
+
+void HalExtFlashDataWrite(ExtFlashStruct_t ExtFlashStruct);
+uint8 HalExtFlashDataRead(ExtFlashStruct_t *ExtFlashStruct);
+void HalExtFlashReset(void);
 #endif /* HAL_EXTERNAL_FLASH */

@@ -51,14 +51,15 @@ extern "C"
  *                                             INCLUDES
  **************************************************************************************************/
 #include "hal_board.h"
-
+#include "hal_rtc_ds1302.h"
+  
 /***************************************************************************************************
  *                                              TYPEDEFS
  ***************************************************************************************************/
 typedef struct
 {
-  uint8 reservation;
-  
+  RTCStruct_t RTCStruct;
+  uint8 sampleData[2];  // 低位小数部分，高位是整数部分
 } ExtFlashStruct_t;
 
 /**************************************************************************************************
@@ -68,7 +69,8 @@ typedef struct
 /**************************************************************************************************
  *                                            CONSTANTS
  **************************************************************************************************/
-
+#define DATA_READ_INVALID       0
+#define DATA_READ_EFFECTIVE     1
   
 /**************************************************************************************************
  *                                             FUNCTIONS - API
@@ -114,15 +116,19 @@ extern void HalExtFlashByteWrite(uint32 writeAddress,uint8 writeData);
 extern void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeLength);
 
 /*
- * Wrtie sample data to flash
+ * Wrtie RTC and sample data to flash
  */  
 extern void HalExtFlashDataWrite(ExtFlashStruct_t ExtFlashStruct);
 
 /*
- * Read sample data from flash
+ * Read RTC and sample data from flash
  */  
-extern ExtFlashStruct_t HalExtFlashDataRead(void);
+extern uint8 HalExtFlashDataRead(ExtFlashStruct_t *ExtFlashStruct);
 
+/*
+ * FLASH reset
+ */
+extern void HalExtFlashReset(void);
 
 #ifdef __cplusplus
 }
