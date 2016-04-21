@@ -175,7 +175,30 @@ void HalRTCInit(void)
   /* Start DS1302 work */
   HalRTCDS1302Work(RTC_DS1302_CLK_ENABLE);
 }
-  
+ 
+
+/**************************************************************************************************
+ * @fn      HalRTCStructInit
+ *
+ * @brief   Init RTC struct
+ *
+ * @param   
+ *
+ * @return  
+ **************************************************************************************************/
+void HalRTCStructInit(RTCStruct_t *RTCStruct,uint8 sec,uint8 min,uint8 hour,uint8 date,
+                             uint8 month,uint8 week,uint8 year)
+{
+  RTCStruct->sec = sec;
+  RTCStruct->min = min;
+  RTCStruct->hour = hour;
+  RTCStruct->date = date;
+  RTCStruct->month = month;
+  RTCStruct->week = week;
+  RTCStruct->year = year;
+  RTCStruct->WP = 0;
+}
+
 
 /**************************************************************************************************
  * @fn      HalRTCGetOrSetFull
@@ -219,6 +242,7 @@ void HalRTCGetOrSetFull(uint8 getOrSetFlag, RTCStruct_t *RTCStruct)
     RTCStruct->month = HalBCD2Decimal(RTCStruct->month&0x1F );
     RTCStruct->week = HalBCD2Decimal( RTCStruct->week&0x07 );
     RTCStruct->year = HalBCD2Decimal( RTCStruct->year&0xFF );
+    RTCStruct->WP = 0;
   }
   else
   {}

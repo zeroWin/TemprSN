@@ -105,6 +105,15 @@ extern void HalRTCGetOrSet(uint8 getOrSetFlag,uint8 registerName,uint8 *value);
  */
 extern void HalRTCGetOrSetFull(uint8 getOrSetFlag, RTCStruct_t *RTCStruct);
 
+
+/*
+ * RTCstruct init
+ * 输入参数为十进制
+ */
+extern void HalRTCStructInit(RTCStruct_t *RTCStruct,uint8 sec,uint8 min,uint8 hour,uint8 date,
+                             uint8 month,uint8 week,uint8 year);
+
+
 #ifdef __cplusplus
 }
 #endif  
