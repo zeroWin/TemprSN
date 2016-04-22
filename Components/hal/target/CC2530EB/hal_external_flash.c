@@ -67,6 +67,9 @@
 #define F_DBSY_COMMAND                  0x80    // Disable SO to output RY/BY# status during AAI programming
 
 #define F_INFO_VERIFI                   0xAA55BCDE  // verification info  低位先写入
+
+/* Dummy Byte */
+#define DUMMY_BYTE     0xFF
 /***************************************************************************************************
  *                                              MACROS
  ***************************************************************************************************/
@@ -422,9 +425,9 @@ void HalExtFlashByteWrite(uint32 writeAddress,uint8 writeData)
   
   HalSpiFlashEnable(); // 选中芯片
 
-  HalSpiWriteByte(F_BYTE_PROGRAM_COMMAND);    // 发送Byte program 命令
+  HalSpiWriteReadByte(F_BYTE_PROGRAM_COMMAND);    // 发送Byte program 命令
   HalExtFlashSendAddr(writeAddress);          // 发送数据写入地址
-  HalSpiWriteByte(writeData);                 // 发送数据
+  HalSpiWriteReadByte(writeData);                 // 发送数据
   
   HalSpiFlashDisable(); // 不选中芯片  
   
@@ -452,10 +455,10 @@ void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeL
   HalSpiFlashEnable(); // 选中芯片
 
   // write first 2 byte
-  HalSpiWriteByte(F_AAI_WORD_PROGRAM_COMMAND);    // 发送AAI program 命令
+  HalSpiWriteReadByte(F_AAI_WORD_PROGRAM_COMMAND);    // 发送AAI program 命令
   HalExtFlashSendAddr(writeAddress);              // 发送数据写入地址
-  HalSpiWriteByte(*writebuffer++);                // 发送数据
-  HalSpiWriteByte(*writebuffer++);                // 发送数据
+  HalSpiWriteReadByte(*writebuffer++);                // 发送数据
+  HalSpiWriteReadByte(*writebuffer++);                // 发送数据
   
   HalSpiFlashDisable(); // 不选中芯片  
   HalExtFlashWaitWriteEnd();    // wait for write end
@@ -464,9 +467,9 @@ void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeL
   {
     HalSpiFlashEnable(); // 选中芯片
       
-    HalSpiWriteByte(F_AAI_WORD_PROGRAM_COMMAND);    // 发送AAI program 命令
-    HalSpiWriteByte(*writebuffer++);                // 发送数据
-    HalSpiWriteByte(*writebuffer++);                // 发送数据
+    HalSpiWriteReadByte(F_AAI_WORD_PROGRAM_COMMAND);    // 发送AAI program 命令
+    HalSpiWriteReadByte(*writebuffer++);                // 发送数据
+    HalSpiWriteReadByte(*writebuffer++);                // 发送数据
     
     HalSpiFlashDisable(); // 不选中芯片      
     HalExtFlashWaitWriteEnd();    // wait for write end
@@ -491,11 +494,11 @@ uint8 HalExtFlashByteRead(uint32 readAddress)
   uint8 readData;
   HalSpiFlashEnable(); // 选中芯片
 
-  HalSpiWriteByte(F_READ_COMMAND);    // 发送Read data 命令
+  HalSpiWriteReadByte(F_READ_COMMAND);    // 发送Read data 命令
   HalExtFlashSendAddr(readAddress);   // 发送数据读取地址
   
   // read data
-  readData = HalSpiReadByte();
+  readData = HalSpiWriteReadByte(DUMMY_BYTE);
   
   HalSpiFlashDisable(); // 不选中芯片
   
@@ -518,13 +521,13 @@ void HalExtFlashBufferRead(uint8 *pBuffer,uint32 readAddress,uint16 readLength)
 {
   HalSpiFlashEnable(); // 选中芯片
 
-  HalSpiWriteByte(F_READ_COMMAND);    // 发送Read data 命令
+  HalSpiWriteReadByte(F_READ_COMMAND);    // 发送Read data 命令
   HalExtFlashSendAddr(readAddress);   // 发送数据读取地址
   
   // read data
   while(readLength--)
   {
-    *pBuffer = HalSpiReadByte();
+    *pBuffer = HalSpiWriteReadByte(DUMMY_BYTE);
     pBuffer++;
   }
   
@@ -549,11 +552,11 @@ uint16 HalExtFlashReadId(void)
   
   HalSpiFlashEnable(); // 选中芯片
   
-  HalSpiWriteByte(F_RDID_COMMAND);  // 发送Read ID 命令
+  HalSpiWriteReadByte(F_RDID_COMMAND);  // 发送Read ID 命令
   HalExtFlashSendAddr(0x000000);    // 发送24位的地址字节
 
-  ManuID = HalSpiReadByte();
-  DeviceID = HalSpiReadByte();
+  ManuID = HalSpiWriteReadByte(DUMMY_BYTE);
+  DeviceID = HalSpiWriteReadByte(DUMMY_BYTE);
   
   HalSpiFlashDisable(); // 不选中芯片
   
@@ -580,11 +583,11 @@ uint32 HalExtFlashReadJEDECId(void)
   
   HalSpiFlashEnable(); // 选中芯片
   
-  HalSpiWriteByte(F_JEDEC_ID_COMMAND);  // 发送Read JEDEC ID 命令
+  HalSpiWriteReadByte(F_JEDEC_ID_COMMAND);  // 发送Read JEDEC ID 命令
   
-  ManuID = HalSpiReadByte();
-  memoryType = HalSpiReadByte();
-  memoryCap = HalSpiReadByte();
+  ManuID = HalSpiWriteReadByte(DUMMY_BYTE);
+  memoryType = HalSpiWriteReadByte(DUMMY_BYTE);
+  memoryCap = HalSpiWriteReadByte(DUMMY_BYTE);
     
   HalSpiFlashDisable(); // 不选中芯片
   
@@ -606,7 +609,7 @@ void HalExtFlashWriteStatusRegEnable(void)
 {
   HalSpiFlashEnable(); // 选中芯片
   
-  HalSpiWriteByte(F_EWSR_COMMAND);  // 发送Write Status enable 命令
+  HalSpiWriteReadByte(F_EWSR_COMMAND);  // 发送Write Status enable 命令
   
   HalSpiFlashDisable(); // 不选中芯片    
 }
@@ -632,7 +635,7 @@ void HalExtFlash4KSectorErase(uint32 addr)
   
   HalSpiFlashEnable();          // 选中芯片
   
-  HalSpiWriteByte(F_4K_ERASE_COMMAND);  // 发送4K erase 命令
+  HalSpiWriteReadByte(F_4K_ERASE_COMMAND);  // 发送4K erase 命令
   HalExtFlashSendAddr(addr);             // 发送擦除首地址
   
   HalSpiFlashDisable();         // 不选中芯片   
@@ -662,7 +665,7 @@ void HalExtFlash32KBlockErase(uint32 addr)
   
   HalSpiFlashEnable();          // 选中芯片
   
-  HalSpiWriteByte(F_32K_ERASE_COMMAND);  // 发送32K erase 命令
+  HalSpiWriteReadByte(F_32K_ERASE_COMMAND);  // 发送32K erase 命令
   HalExtFlashSendAddr(addr);             // 发送擦除首地址
   
   HalSpiFlashDisable();         // 不选中芯片   
@@ -691,7 +694,7 @@ void HalExtFlash64KBlockErase(uint32 addr)
   
   HalSpiFlashEnable();          // 选中芯片
   
-  HalSpiWriteByte(F_64K_ERASE_COMMAND);  // 发送64K erase 命令
+  HalSpiWriteReadByte(F_64K_ERASE_COMMAND);  // 发送64K erase 命令
   HalExtFlashSendAddr(addr);             // 发送擦除首地址
   
   HalSpiFlashDisable();         // 不选中芯片   
@@ -715,7 +718,7 @@ void HalExtFlashChipErase(void)
   
   HalSpiFlashEnable();          // 选中芯片
   
-  HalSpiWriteByte(F_CHIP_ERASE_COMMAND);  // 发送Chip erase 命令
+  HalSpiWriteReadByte(F_CHIP_ERASE_COMMAND);  // 发送Chip erase 命令
   
   HalSpiFlashDisable();         // 不选中芯片   
   
@@ -751,7 +754,7 @@ void HalExtFlashWriteEnable(void)
 {
   HalSpiFlashEnable(); // 选中芯片
   
-  HalSpiWriteByte(F_WREN_COMMAND);  // 发送Write enable 命令
+  HalSpiWriteReadByte(F_WREN_COMMAND);  // 发送Write enable 命令
   
   HalSpiFlashDisable(); // 不选中芯片    
 }
@@ -770,7 +773,7 @@ void HalExtFlashWriteDisable(void)
 {
   HalSpiFlashEnable(); // 选中芯片
   
-  HalSpiWriteByte(F_WRDI_COMMAND);  // 发送Write disable 命令
+  HalSpiWriteReadByte(F_WRDI_COMMAND);  // 发送Write disable 命令
   
   HalSpiFlashDisable(); // 不选中芯片    
 }
@@ -791,8 +794,8 @@ uint8 HalExtFlashReadStatusRegister(void)
   
   HalSpiFlashEnable(); // 选中芯片
   
-  HalSpiWriteByte(F_RDSR_COMMAND);  // 发送Read status register 命令
-  statusRegister = HalSpiReadByte();
+  HalSpiWriteReadByte(F_RDSR_COMMAND);  // 发送Read status register 命令
+  statusRegister = HalSpiWriteReadByte(DUMMY_BYTE);
   
   HalSpiFlashDisable(); // 不选中芯片  
   
@@ -815,8 +818,8 @@ void HalExtFlashWriteStatusRegister(uint8 writeStatus)
   
   HalSpiFlashEnable(); // 选中芯片
   
-  HalSpiWriteByte(F_WRSR_COMMAND);  // 发送Write Status命令
-  HalSpiWriteByte(writeStatus);     // write data to status register
+  HalSpiWriteReadByte(F_WRSR_COMMAND);  // 发送Write Status命令
+  HalSpiWriteReadByte(writeStatus);     // write data to status register
   
   HalSpiFlashDisable(); // 不选中芯片 
 }
@@ -833,9 +836,9 @@ void HalExtFlashWriteStatusRegister(uint8 writeStatus)
  **************************************************************************************************/
 void HalExtFlashSendAddr(uint32 Addr)
 {
-  HalSpiWriteByte((Addr & 0xFF0000) >> 16); 
-  HalSpiWriteByte((Addr & 0xFF00) >> 8);
-  HalSpiWriteByte((Addr & 0xFF));
+  HalSpiWriteReadByte((Addr & 0xFF0000) >> 16); 
+  HalSpiWriteReadByte((Addr & 0xFF00) >> 8);
+  HalSpiWriteReadByte((Addr & 0xFF));
 }
 
 
