@@ -54,6 +54,15 @@ extern "C"
 /***************************************************************************************************
  *                                              TYPEDEFS
  ***************************************************************************************************/
+typedef enum
+{
+  AD7793_RATE_4dot17 = 0,
+  AD7793_RATE_8dot33,
+  AD7793_RATE_16dot7,
+  AD7793_RATE_33dot2,
+  AD7793_RATE_62dot0,
+  AD7793_RATE_NUM
+} AD7793Rate_t; // update rate.
 
 
 /**************************************************************************************************
@@ -74,8 +83,40 @@ extern "C"
  */
 extern void HalAD7793Init(void);
 
+/*
+ * Config the first channel (AIN1).
+ */
+extern void AD7793_AIN1_config_one(AD7793Rate_t OutUpdateRate);
 
+/*
+ * Config the second channel (AIN2).
+ */
+extern void AD7793_AIN2_config_one(AD7793Rate_t OutUpdateRate);
 
+/*
+ * Config the third channel (AIN3).
+ */
+extern void AD7793_AIN3_config_one(AD7793Rate_t OutUpdateRate);
+
+/*
+ * Get the first channel (AIN1) data.
+ */
+extern float AD7793_AIN1_fetch_one(void);
+
+/*
+ * Get the second channel (AIN2) data.
+ */
+extern float AD7793_AIN2_fetch_one(void);
+
+/*
+ * Get the third channel (AIN3) data.
+ */
+extern float AD7793_AIN3_fetch_one(void);
+
+/*
+ * Judge AD over or not.
+ */
+extern bool AD7793_IsReadyToFetch(void);
 
 #ifdef __cplusplus
 }
