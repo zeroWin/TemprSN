@@ -66,6 +66,8 @@
 #include "hal_external_flash.h"
 #include "hal_battery_monitor.h"
 #include "hal_rtc_ds1302.h"
+#include "hal_AD7793.h"
+#include "measTempr.h"
 
 #include "string.h"
 /*********************************************************************
@@ -75,32 +77,48 @@
 /*********************************************************************
  * CONSTANTS
  */
+#define MEAS_TEMPR_LOOP_COUNT_MAX     80
 
 /*********************************************************************
  * TYPEDEFS
  */
+typedef enum
+{
+  AD7793_IDLE,
+  AD7793_SAMPLE
+} AD7793State_t;
+
 
 /*********************************************************************
  * GLOBAL VARIABLES
  */
 
 // This list should be filled with Application specific Cluster IDs.
-const cId_t GenericApp_ClusterList[GENERICAPP_MAX_CLUSTERS] =
+const cId_t GenericApp_InClusterList[GENERICAPP_IN_CLUSTERS] =
 {
-  GENERICAPP_CLUSTERID
+  GENERICAPP_CLUSTERID,
+  GENERICAPP_CLUSTERID_START,
+  GENERICAPP_CLUSTERID_SYNC
+};
+
+const cId_t GenericApp_OutClusterList[GENERICAPP_OUT_CLUSTERS] =
+{
+  GENERICAPP_CLUSTERID,
+  GENERICAPP_CLUSTERID_SYNC_OVER,
+  GENERICAPP_CLUSTERID_TEMPR_RESULT
 };
 
 const SimpleDescriptionFormat_t GenericApp_SimpleDesc =
 {
-  GENERICAPP_ENDPOINT,              //  int Endpoint;
-  GENERICAPP_PROFID,                //  uint16 AppProfId[2];
-  GENERICAPP_DEVICEID,              //  uint16 AppDeviceId[2];
-  GENERICAPP_DEVICE_VERSION,        //  int   AppDevVer:4;
-  GENERICAPP_FLAGS,                 //  int   AppFlags:4;
-  GENERICAPP_MAX_CLUSTERS,          //  byte  AppNumInClusters;
-  (cId_t *)GenericApp_ClusterList,  //  byte *pAppInClusterList;
-  GENERICAPP_MAX_CLUSTERS,          //  byte  AppNumInClusters;
-  (cId_t *)GenericApp_ClusterList   //  byte *pAppInClusterList;
+  GENERICAPP_ENDPOINT,                  //  int Endpoint;
+  GENERICAPP_PROFID,                    //  uint16 AppProfId[2];
+  GENERICAPP_DEVICEID,                  //  uint16 AppDeviceId[2];
+  GENERICAPP_DEVICE_VERSION,            //  int   AppDevVer:4;
+  GENERICAPP_FLAGS,                     //  int   AppFlags:4;
+  GENERICAPP_IN_CLUSTERS,               //  byte  AppNumInClusters;
+  (cId_t *)GenericApp_InClusterList,    //  byte *pAppInClusterList;
+  GENERICAPP_OUT_CLUSTERS,              //  byte  AppNumOutClusters;
+  (cId_t *)GenericApp_OutClusterList    //  byte *pAppOutClusterList;
 };
 
 // This is the Endpoint/Interface description.  It is defined here, but
@@ -109,6 +127,8 @@ const SimpleDescriptionFormat_t GenericApp_SimpleDesc =
 // way it's defined in this sample app it is define in RAM.
 endPointDesc_t GenericApp_epDesc;
 
+// This is for GenericApp state machine。
+TemprSystemStatus_t TemprSystemStatus;
 /*********************************************************************
  * EXTERNAL VARIABLES
  */
@@ -130,14 +150,36 @@ byte GenericApp_TransID;  // This is the unique message ID (counter)
 
 afAddrType_t GenericApp_DstAddr;
 
+/* For measure */
+AD7793State_t  appAD7793State;         // ADC状态
+static uint16  ad7793RegSetDelay_ms;   // 启动采样后获取结果的延时时间
+AD7793Rate_t   ad7793UpdateRate;       // 选择的采样频率
+measResult_t   measRltArray[MEAS_TEMPR_LOOP_COUNT_MAX]; // 存储测量和计算中间值
+ResultStore_t  OneRltStore;            // 存储一次的测量结果
+
+static uint16 retryNumOfMeasTempr;  // 记录计算体温的次数
+static SensorCalCoef_t   s_factoryCalCoef;
+
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
 void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg );
 void GenericApp_HandleKeys( byte shift, byte keys );
 void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pckt );
-void GenericApp_SendTheMessage( void );
 
+
+void GenericApp_DoMeasTempr(void);
+void GenericApp_PtVoltSample(void);
+void GenericApp_RefVoltSample(void);
+void GenericApp_ThermoVoltSample(void);
+
+void GenericApp_MeasTemprInit(void);
+void GenericApp_InitMeasResultArray(void);
+void MeasTemprComplete(real32 fOutputDegree, real32 fColdEndDegree, bool isStableRlt);
+real32 CalWorkEndTemp(real32 fWorkEndDegree, real32 fColdEndDegree);
+
+void GenericApp_HandleNetworkStatus( devStates_t GenericApp_NwkStateTemp);
+void GenericApp_LeaveNetwork( void );
 /*********************************************************************
  * NETWORK LAYER CALLBACKS
  */
@@ -187,11 +229,15 @@ void GenericApp_Init( byte task_id )
   // Register for all key events - This app will handle all key events
   RegisterForKeys( GenericApp_TaskID );
   
+  // Init system status 
+  TemprSystemStatus = TEMPR_OFFLINE_IDLE;
   // Update the display
 #if defined ( LCD_SUPPORTED )
     HalLcdWriteString( "GenericApp", HAL_LCD_LINE_1 );
 #endif
-HalRTCInit();
+  HalOledShowString(0,0,32,"OFF-IDLE");
+  HalOledRefreshGram();
+  
   ZDO_RegisterForZDOMsg( GenericApp_TaskID, End_Device_Bind_rsp );
   ZDO_RegisterForZDOMsg( GenericApp_TaskID, Match_Desc_rsp );
 }
@@ -259,15 +305,8 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
 
         case ZDO_STATE_CHANGE:
           GenericApp_NwkState = (devStates_t)(MSGpkt->hdr.status);
-          if ( (GenericApp_NwkState == DEV_ZB_COORD)
-              || (GenericApp_NwkState == DEV_ROUTER)
-              || (GenericApp_NwkState == DEV_END_DEVICE) )
-          {
-//            // Start sending "the" message in a regular interval.
-//            osal_start_timerEx( GenericApp_TaskID,
-//                                GENERICAPP_SEND_MSG_EVT,
-//                                GENERICAPP_SEND_MSG_TIMEOUT );
-          }
+          
+          GenericApp_HandleNetworkStatus(GenericApp_NwkState);
           break;
 
         default:
@@ -285,22 +324,40 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
     return (events ^ SYS_EVENT_MSG);
   }
 
-  // Send a message out - This event is generated by a timer
-  //  (setup in GenericApp_Init()).
-  if ( events & GENERICAPP_SEND_MSG_EVT )
+  // handle GENERICAPP_PT_VOLT_SAMPLE
+  if(events & GENERICAPP_PT_VOLT_SAMPLE)
   {
-    // Send "the" message
-    GenericApp_SendTheMessage();
-
-    // Setup to send message again
-    osal_start_timerEx( GenericApp_TaskID,
-                        GENERICAPP_SEND_MSG_EVT,
-                        GENERICAPP_SEND_MSG_TIMEOUT );
-
-    // return unprocessed events
-    return (events ^ GENERICAPP_SEND_MSG_EVT);
+    GenericApp_PtVoltSample();
+    
+    return (events ^ GENERICAPP_PT_VOLT_SAMPLE);
+  }  
+  
+  // handle GENERICAPP_REF_VOLT_SAMPLE
+  if(events & GENERICAPP_REF_VOLT_SAMPLE)
+  {
+    GenericApp_RefVoltSample();
+    
+    return (events ^ GENERICAPP_REF_VOLT_SAMPLE);
   }
 
+  // handle GENERICAPP_THERMO_VOLT_SAMPLE
+  if(events & GENERICAPP_THERMO_VOLT_SAMPLE)
+  {
+    GenericApp_ThermoVoltSample();
+    
+    return (events ^ GENERICAPP_THERMO_VOLT_SAMPLE);
+  }  
+  
+  
+  // handle meas tempr event
+  if (events & GENERICAPP_DO_MEAS_TEMPR)
+  {
+    // start temperature measurement.
+    GenericApp_DoMeasTempr();
+    
+    return (events ^ GENERICAPP_DO_MEAS_TEMPR);
+  }  
+  
   // Discard unknown events
   return 0;
 }
@@ -375,27 +432,72 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
  */
 void GenericApp_HandleKeys( byte shift, byte keys )
 {
-  uint8 a=23;
-  ExtFlashStruct_t ExtFlashStruct;
-  if(keys & HAL_KEY_SW_6)
+  if(keys & HAL_KEY_SW_6) // Link key
   {
-    HalOledShowNum(0,0,_NIB.nwkPanId,5,16);
-    HalOledShowNum(50,0,_NIB.nwkDevAddress,5,16);  
-    HalOledShowNum(0,15,_NIB.nwkCoordAddress,1,16);
-    
-
-    HalRTCStructInit(&(ExtFlashStruct.RTCStruct),00,58,9,10,7,11,12);
-    ExtFlashStruct.sampleData[0] = 1;
-    ExtFlashStruct.sampleData[1] = 2;
-    HalExtFlashDataWrite(ExtFlashStruct);
-    //HalRTCGetOrSet(RTC_DS1302_SET,RTC_REGISTER_SEC,&a);
+    switch(TemprSystemStatus)
+    {
+      case TEMPR_OFFLINE_IDLE:  // 离线-->寻找网络
+      {
+        if( ZDApp_StartJoiningCycle() == FALSE )
+          if( ZDOInitDevice(0) == ZDO_INITDEV_LEAVE_NOT_STARTED) //Start Network
+            ZDOInitDevice(0);
+        TemprSystemStatus = TEMPR_FIND_NETWORK;
+      }
+      break;
+      
+      case TEMPR_ONLINE_IDLE: // 在线-->离线
+      {
+        // Leave Network
+        GenericApp_LeaveNetwork(); 
+        TemprSystemStatus = TEMPR_CLOSE;
+       
+        HalOledShowString(0,0,32,"CLOSE");
+        HalOledRefreshGram();
+      }
+      break;
+      
+      case TEMPR_FIND_NETWORK: // 寻找网络-->离线
+      {
+        // Stop search network
+        ZDApp_StopJoiningCycle();
+        TemprSystemStatus = TEMPR_OFFLINE_IDLE;
+        
+        HalOledShowString(0,0,32,"OFF-IDLE");
+        HalOledRefreshGram();
+      }
+      break;
+      default:// Online , Offline measure , closing , SYNC
+        break;//do nothing
+    }
   }
-  if(keys & HAL_KEY_SW_7)
+  
+  if(keys & HAL_KEY_SW_7) // Work key
   {
-    HalOledShowChar(0,0,'b',12,1);
+    switch(TemprSystemStatus)
+    {
+      case TEMPR_ONLINE_IDLE:  // 在线空闲
+      {
+        TemprSystemStatus = TEMPR_ONLINE_MEASURE;
+        
+        GenericApp_MeasTemprInit();
+        // to start from PT volt sampling
+        osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);
+      }
+      break;
+      
+      case TEMPR_OFFLINE_IDLE: // 离线空闲
+      {
+        TemprSystemStatus = TEMPR_OFFLINE_MEASURE;
+        
+        GenericApp_MeasTemprInit();
+        // to start from PT volt sampling
+        osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);
+      }
+      break;
+      default:// Online , Offline measure , closing , SYNC
+        break;//do nothing
+    }
     
-    a = HalExtFlashDataRead(&ExtFlashStruct);
-    //HalRTCGetOrSet(RTC_DS1302_GET,RTC_REGISTER_SEC,&a);
   }
 
   HalOledRefreshGram();
@@ -428,48 +530,395 @@ void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
       WPRINTSTR( pkt->cmd.Data );
 #endif
       HalOledShowString(20,0,16,(uint8 *)pkt->cmd.Data);
-      HalOledShowString(20,15,16,"V0.02");
+      HalOledShowString(20,15,16,"V0.03");
       HalOledRefreshGram();
-      if( strcmp((char*)pkt->cmd.Data,"Start") == 0 )
-      {
-        //osal_set_event( GenericApp_TaskID , GENERICAPP_START_MEASURE );
-      }
-      else if( strcmp((char*)pkt->cmd.Data,"End") == 0)
-      {
-        //osal_set_event( GenericApp_TaskID , GENERICAPP_END_MEASURE );
-      }
       
+      break;
+    case GENERICAPP_CLUSTERID_START:
+        TemprSystemStatus = TEMPR_ONLINE_MEASURE;
+        
+        GenericApp_MeasTemprInit();
+        // to start from PT volt sampling
+        osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);    
+      break;
+      
+    case GENERICAPP_CLUSTERID_SYNC:
       break;
   }
 }
 
+
 /*********************************************************************
- * @fn      GenericApp_SendTheMessage
+ * @fn      GenericApp_InitMeasResultArray
  *
- * @brief   Send "the" message.
+ * @brief   none.
  *
  * @param   none
  *
  * @return  none
  */
-void GenericApp_SendTheMessage( void )
+void GenericApp_InitMeasResultArray(void)
 {
-  char theMessageData[] = "Hello World";
+  uint8 idx = 0;
 
-  if ( AF_DataRequest( &GenericApp_DstAddr, &GenericApp_epDesc,
-                       GENERICAPP_CLUSTERID,
-                       (byte)osal_strlen( theMessageData ) + 1,
-                       (byte *)&theMessageData,
-                       &GenericApp_TransID,
-                       AF_DISCV_ROUTE, AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
+  for (idx = 0; idx < MEAS_TEMPR_LOOP_COUNT_MAX; idx ++)
   {
-    // Successfully requested to be sent.
-  }
-  else
-  {
-    // Error occurred in request to send.
+    measRltArray[idx].fPtVolt = 0.0f;
+    measRltArray[idx].fRefVolt = 0.0f;
+    measRltArray[idx].fThermoVolt = 0.0f;
+    measRltArray[idx].fColdEndDegree = -1.0f;
+    measRltArray[idx].fWorkEndDegree = -1.0f;
   }
 }
 
+
+/*********************************************************************
+ * @fn      GenericApp_PtVoltSample()
+ *
+ * @brief   none.
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+void GenericApp_PtVoltSample(void)
+{
+  real32 fVolt = 0.0f;
+  
+  if (appAD7793State == AD7793_IDLE) // 配置并启动采样
+  {
+    AD7793_AIN2_config_one(ad7793UpdateRate);
+
+    appAD7793State = AD7793_SAMPLE;
+    osal_start_timerEx(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE, ad7793RegSetDelay_ms);
+  }
+  else if ((appAD7793State == AD7793_SAMPLE) && AD7793_IsReadyToFetch())
+  {
+    fVolt = AD7793_AIN2_fetch_one(); // 获取结果
+    measRltArray[retryNumOfMeasTempr].fPtVolt = fVolt;
+
+    appAD7793State = AD7793_IDLE;
+    osal_set_event(GenericApp_TaskID, GENERICAPP_REF_VOLT_SAMPLE);
+  }
+  else
+  {
+    osal_start_timerEx(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE, ad7793RegSetDelay_ms/10);
+  }
+}
+
+
+/*********************************************************************
+ * @fn      GenericApp_RefVoltSample()
+ *
+ * @brief   none.
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+void GenericApp_RefVoltSample(void)
+{
+  real32 fVolt = 0.0f;
+  
+  if (appAD7793State == AD7793_IDLE)
+  {
+    AD7793_AIN3_config_one(ad7793UpdateRate); // 配置并启动采样
+
+    appAD7793State = AD7793_SAMPLE;
+    osal_start_timerEx(GenericApp_TaskID, GENERICAPP_REF_VOLT_SAMPLE, ad7793RegSetDelay_ms);
+  }
+  else if ((appAD7793State == AD7793_SAMPLE) && AD7793_IsReadyToFetch())
+  {
+    fVolt = AD7793_AIN3_fetch_one();  // 获取结果
+    measRltArray[retryNumOfMeasTempr].fRefVolt = fVolt;
+
+    appAD7793State = AD7793_IDLE;
+    osal_set_event(GenericApp_TaskID, GENERICAPP_THERMO_VOLT_SAMPLE);
+  }
+  else
+  {
+    osal_start_timerEx(GenericApp_TaskID, GENERICAPP_REF_VOLT_SAMPLE, ad7793RegSetDelay_ms/10);
+  }
+}
+
+
+/*********************************************************************
+ * @fn      GenericApp_ThermoVoltSample()
+ *
+ * @brief   none.
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+void GenericApp_ThermoVoltSample(void)
+{
+  real32 fVolt = 0.0f;
+  
+  if (appAD7793State == AD7793_IDLE)
+  {
+    AD7793_AIN1_config_one(ad7793UpdateRate); // 配置并启动采样
+
+    appAD7793State = AD7793_SAMPLE;
+    osal_start_timerEx(GenericApp_TaskID, GENERICAPP_THERMO_VOLT_SAMPLE, ad7793RegSetDelay_ms);
+  }
+  else if ((appAD7793State == AD7793_SAMPLE) && AD7793_IsReadyToFetch())
+  {
+    fVolt = AD7793_AIN1_fetch_one(); // 获取结果
+    measRltArray[retryNumOfMeasTempr].fThermoVolt = fVolt;
+
+    appAD7793State = AD7793_IDLE;
+    osal_set_event(GenericApp_TaskID, GENERICAPP_DO_MEAS_TEMPR);
+  }
+  else
+  {
+    osal_start_timerEx(GenericApp_TaskID, GENERICAPP_THERMO_VOLT_SAMPLE, ad7793RegSetDelay_ms/10);
+  }  
+}
+
+
+/*********************************************************************
+ * @fn      GenericApp_DoMeasTempr()
+ *
+ * @brief   Process do meas temperature event
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+void GenericApp_DoMeasTempr(void)
+{
+  real32 fColdEndTempDegree = 0.0f;
+  real32 fOutputDegree = -1.0f;
+   
+  bool isComplete = FALSE; 
+  bool isValidRlt = FALSE;
+  bool isStableRlt = FALSE;
+  
+
+  isValidRlt = measWorkEndTemperature(&measRltArray[retryNumOfMeasTempr]);
+  
+  HalOledDisp_2p2(measRltArray[retryNumOfMeasTempr].fWorkEndDegree);
+  
+
+  if (isValidRlt == FALSE)
+  { // once get the invalid result, to stop and quit.
+    isComplete = TRUE;
+  }
+  else
+  {
+    isComplete = CheckMeasComplete( &measRltArray[0], 
+                                    retryNumOfMeasTempr, 
+                                    &fOutputDegree,
+                                    &fColdEndTempDegree); 
+  }  
+  // to start new loop
+  retryNumOfMeasTempr ++;
+  
+  // simply reset to disable fast measurement, that is, slow_meas at least
+  // to execute 60% loop of maximum loop number.
+  #if (defined(SLOW_MEAS) && SLOW_MEAS == TRUE)
+  
+  uint16 count_slow_th = MEAS_TEMPR_LOOP_COUNT_MAX*2/3;   
+  if (retryNumOfMeasTempr < count_slow_th)
+    isComplete = FALSE;
+  
+  #endif
+  
+  if ((retryNumOfMeasTempr < MEAS_TEMPR_LOOP_COUNT_MAX) && (isComplete == FALSE))
+  { // not complete, to start new loop of meas temperature;
+    osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);
+  }
+  else
+  { // 测量结束
+    // GenericApp_AppState = APP_READY;
+    // if it is completed as expected, the result shall be stable;
+    isStableRlt = isComplete;
+    MeasTemprComplete(fOutputDegree, fColdEndTempDegree, isStableRlt);
+    
+    return;
+  }
+  
+  return;
+}
+
+
+/*********************************************************************
+ * @fn      GenericApp_MeasTemprInit()
+ *
+ * @brief   Init Measure status and start event
+ *          Be called when work pressed
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+void GenericApp_MeasTemprInit(void)
+{
+  retryNumOfMeasTempr = 0;
+  appAD7793State = AD7793_IDLE;
+  
+  // 480ms, 240ms, 120ms ,60ms or 32ms
+  ad7793UpdateRate     = AD7793_RATE_33dot2;
+  ad7793RegSetDelay_ms = (uint16)(AD7793_REG_SET_DELAY[ad7793UpdateRate]*1.05); 
+    
+  GenericApp_InitMeasResultArray();
+}
+
+
+/*********************************************************************
+ * @fn      MeasTemprComplete()
+ *
+ * @brief   temperature measurement is completed, and to finalize the results.
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+void MeasTemprComplete(real32 fOutputDegree, real32 fColdEndDegree, bool isStableRlt)
+{
+  real32 fOutputTmp = 0.0f;
+  int32  iOutputTmp = 0;
+  
+
+  fOutputTmp = CalWorkEndTemp(fOutputDegree, fColdEndDegree);
+    
+  // to round the resolution to 0.05 degree.
+  iOutputTmp = (int32)(fOutputTmp*100/5.0 + 0.5);
+  OneRltStore.fTempDegree = (real32)iOutputTmp * 0.05f; 
+
+  // continuously measure temperature until we get stable temp result;
+  #if (defined(GO_TO_STABLE) && GO_TO_STABLE == TRUE)
+  if (!isStableRlt) // 未稳定
+  {
+    GenericApp_MeasTemprInit();
+    // pause with 500ms to wait ota msg transmition complete;
+    osal_start_timerEx(GenericApp_TaskID, GENERICAPP_DO_MEAS_TEMPR, 500);
+  }
+  else // 稳定,进行状态切换
+  {
+    // 显示稳定温度
+    HalOledDisp_2p2(OneRltStore.fTempDegree);
+    
+    ExtFlashStruct_t ExtFlashStruct;
+    HalRTCGetOrSetFull(RTC_DS1302_GET,&ExtFlashStruct.RTCStruct);
+    // 先存低位
+    floatAndByteConv_t floatAndByteConv;
+    floatAndByteConv.floatData = OneRltStore.fTempDegree;
+    ExtFlashStruct.sampleData[0] =  floatAndByteConv.byteData[0];
+    ExtFlashStruct.sampleData[1] =  floatAndByteConv.byteData[1];
+    ExtFlashStruct.sampleData[2] =  floatAndByteConv.byteData[2];
+    ExtFlashStruct.sampleData[3] =  floatAndByteConv.byteData[3];
+    
+    if(TemprSystemStatus == TEMPR_ONLINE_MEASURE) // 在线状态发送数据
+    {
+      TemprSystemStatus = TEMPR_ONLINE_IDLE;
+      // 发送
+      AF_DataRequest( &GenericApp_DstAddr, &GenericApp_epDesc,
+                       GENERICAPP_CLUSTERID_TEMPR_RESULT,
+                       TEMPR_RESULT_BYTE_PER_PACKET,
+                       (uint8 *)&ExtFlashStruct,
+                       &GenericApp_TransID,
+                       AF_DISCV_ROUTE, AF_DEFAULT_RADIUS );
+      
+    }
+    if(TemprSystemStatus == TEMPR_OFFLINE_MEASURE) // 离线状态存储数据
+    {
+      TemprSystemStatus = TEMPR_OFFLINE_IDLE;
+      // 存储 写入flash
+      HalExtFlashDataWrite(ExtFlashStruct);
+    }
+  }
+  #endif
+  
+  return;
+}
+
+/*********************************************************************
+ * @fn      CalWorkEndTemp()
+ *
+ * @brief   none.
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+real32 CalWorkEndTemp(real32 fWorkEndDegree, real32 fColdEndDegree)
+{
+  real32 fOutput = 0.0f;
+  real32 fa, fb, fdelta;
+
+  if (s_factoryCalCoef.ReservedParm3 > 0.0f)
+  {
+    fa = s_factoryCalCoef.CalCoef_a;
+    fb = s_factoryCalCoef.CalCoef_b;
+    fdelta = s_factoryCalCoef.CalCoef_delta;
+  }
+  else
+  {
+    fa = 0.0f;
+    fb = 1.0f;
+    fdelta = 0.0f;
+  }
+  
+  fOutput = fa * fColdEndDegree + fb * fWorkEndDegree + fdelta;
+
+  return (fOutput);
+}
+
+
+/*********************************************************************
+ * @fn      GenericApp_HandleNetworkStatus
+ *
+ * @brief  According to EcgSystemStatus to do different thing
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+void GenericApp_HandleNetworkStatus( devStates_t GenericApp_NwkStateTemp)
+{
+  if( GenericApp_NwkStateTemp == DEV_END_DEVICE) //connect to GW
+  {
+      TemprSystemStatus = TEMPR_ONLINE_IDLE;
+      HalOledShowString(0,0,32,"ON-IDLE");
+  }
+  else if( TemprSystemStatus != TEMPR_OFFLINE_IDLE) // Find network -- 1.coordinate lose 2.first connect to coordinate 
+  { // 关闭搜索后，可能由于OSAL的timer事件设置，再进入一次ZDO_STATE_CHANGE，上面的判断就是为了排除这种情况
+    if ( TemprSystemStatus == TEMPR_ONLINE_MEASURE ) // Online measure status
+    {
+    }
+    
+    TemprSystemStatus = TEMPR_FIND_NETWORK;
+    HalOledShowString(0,0,32,"FIND-NWK");     
+  }
+    
+  HalOledRefreshGram();
+  
+}
+
+
+/*********************************************************************
+ * @fn      GenericApp_LeaveNetwork
+ *
+ * @brief   Let device leave network.
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+void GenericApp_LeaveNetwork( void )
+{
+  NLME_LeaveReq_t leaveReq;
+
+  osal_memset((uint8 *)&leaveReq,0,sizeof(NLME_LeaveReq_t));
+  osal_memcpy(leaveReq.extAddr,NLME_GetExtAddr(),Z_EXTADDR_LEN);
+
+  leaveReq.removeChildren = FALSE; // Only false shoule be use.
+  leaveReq.rejoin = FALSE;  
+  leaveReq.silent = FALSE;
+
+  NLME_LeaveReq( &leaveReq );
+}
 /*********************************************************************
 *********************************************************************/

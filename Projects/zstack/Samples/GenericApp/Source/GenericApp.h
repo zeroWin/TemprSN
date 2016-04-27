@@ -63,19 +63,49 @@ extern "C"
 #define GENERICAPP_DEVICE_VERSION     0
 #define GENERICAPP_FLAGS              0
 
-#define GENERICAPP_MAX_CLUSTERS       1
-#define GENERICAPP_CLUSTERID          1
+#define GENERICAPP_IN_CLUSTERS        3
+#define GENERICAPP_OUT_CLUSTERS       3  
 
-// Send Message Timeout
-#define GENERICAPP_SEND_MSG_TIMEOUT   5000     // Every 5 seconds
+#define GENERICAPP_CLUSTERID               1   // I/O
+#define GENERICAPP_CLUSTERID_START         2   // I
+//#define GENERICAPP_CLUSTERID_STOP          3
+#define GENERICAPP_CLUSTERID_SYNC          4   // I
+#define GENERICAPP_CLUSTERID_SYNC_OVER     5   // O
+#define GENERICAPP_CLUSTERID_TEMPR_RESULT  6   // O
+//#define GENERICAPP_CLUSTERID_ECG_RESULT    7   // O
 
 // Application Events (OSAL) - These are bit weighted definitions.
-#define GENERICAPP_SEND_MSG_EVT       0x0001
+//#define GENERICAPP_SEND_MSG_EVT       0x0001
 
+#define GENERICAPP_DO_MEAS_TEMPR      0x0020
+#define GENERICAPP_PT_VOLT_SAMPLE     0x0040
+#define GENERICAPP_REF_VOLT_SAMPLE    0x0080
+#define GENERICAPP_THERMO_VOLT_SAMPLE 0x0100
+
+/* packet */
+#define TEMPR_RESULT_BYTE_PER_PACKET     12
 /*********************************************************************
  * MACROS
  */
 
+/*********************************************************************
+ * TYPEDEFS
+ */
+typedef enum
+{
+  TEMPR_ONLINE_IDLE,
+  TEMPR_ONLINE_MEASURE,
+  TEMPR_OFFLINE_IDLE,
+  TEMPR_OFFLINE_MEASURE,
+  TEMPR_FIND_NETWORK,
+  TEMPR_CLOSE
+} TemprSystemStatus_t;  
+
+typedef union 
+{
+  real32 floatData;
+  uint8 byteData[4];
+} floatAndByteConv_t;
 /*********************************************************************
  * FUNCTIONS
  */
