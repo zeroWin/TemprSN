@@ -179,10 +179,10 @@ void HalExtFlashDataWrite(ExtFlashStruct_t ExtFlashStruct)
   
   // write RTC and sample data
   HalExtFlashRTCWrite(&(ExtFlashStruct.RTCStruct),writeAddress); // 写入8BYTE 时间
-  HalExtFlashSampleWrite(ExtFlashStruct.sampleData,writeAddress+8); // 写入2BYTE 采集数据
+  HalExtFlashSampleWrite(ExtFlashStruct.sampleData,writeAddress+8); // 写入4BYTE 采集数据
   
   // 更新写入的地址
-  sectorWritePos += 10;
+  sectorWritePos += 12;
   if(sectorWritePos > 4095) // 该扇区用完，进入下一个扇区
   {
     sectorWriteEnd++;
@@ -220,27 +220,27 @@ void HalExtFlashDataWrite(ExtFlashStruct_t ExtFlashStruct)
 uint8 HalExtFlashDataRead(ExtFlashStruct_t *ExtFlashStruct)
 {
   // 计算读取地址
-  uint32 readAddress = sectorReadEnd*4096 + sectorReadPos - 10;
+  uint32 readAddress = sectorReadEnd*4096 + sectorReadPos - 12;
   if( readAddress < 4096 )
     return DATA_READ_INVALID;
   
   // Read RTC and sample data
   HalExtFlashRTCRead(&(ExtFlashStruct->RTCStruct),readAddress); // 读取8BYTE 时间
-  HalExtFlashSampleRead(ExtFlashStruct->sampleData,readAddress+8); // 读取2BYTE 采集数据 
+  HalExtFlashSampleRead(ExtFlashStruct->sampleData,readAddress+8); // 读取4BYTE 采集数据 
   
   // 更新读取写入
-  if(sectorReadPos > 10)  // 该扇区没读完
+  if(sectorReadPos > 12)  // 该扇区没读完
   {
-    sectorReadPos -= 10;
+    sectorReadPos -= 12;
   }
   else  // 该扇区读完 
   {
-    if(sectorReadPos == 10)
+    if(sectorReadPos == 12)
       sectorReadPos = 0;
     else
     {
       sectorReadEnd--;
-      sectorReadPos = 4095 - (9 - sectorReadPos);
+      sectorReadPos = 4095 - (11 - sectorReadPos);
     }
     // 擦除读完的扇区
     HalExtFlash4KSectorErase(sectorWriteEnd*4096);
@@ -272,7 +272,7 @@ uint8 HalExtFlashDataRead(ExtFlashStruct_t *ExtFlashStruct)
  **************************************************************************************************/
 void HalExtFlashSampleWrite(uint8 *SampleData,uint32 addr)
 {
-  HalExtFlashBufferWrite(SampleData,addr,2);
+  HalExtFlashBufferWrite(SampleData,addr,4);
 }
 
 
@@ -287,7 +287,7 @@ void HalExtFlashSampleWrite(uint8 *SampleData,uint32 addr)
  **************************************************************************************************/
 void HalExtFlashSampleRead(uint8 *SampleData,uint32 addr)
 {
-  HalExtFlashBufferRead(SampleData,addr,2);
+  HalExtFlashBufferRead(SampleData,addr,4);
 }
 
 
