@@ -103,6 +103,9 @@ extern void HalOledOnOff(uint8 mode);
  */
 extern void halMcuWaitUs(uint16 microSecs); 
 
+//在LCD上显示一个小于100、保留2位小数的浮点数
+extern void HalOledDisp_2p2(real32 data);
+
 #ifdef __cplusplus
 }
 #endif  
