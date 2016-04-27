@@ -215,28 +215,6 @@ void AD7793_set_ModeReg(AD7793Rate_t OutUpdateRate);
  **************************************************************************************************/
 void HalAD7793Init(void)
 {
-  uint8 b,c,d,e;
-  uint8 a;
-  d = 0;
-  HalSpiAD7793Enable();
-//  HalSpiWriteByte(0x28);
-//  HalSpiWriteByte(0xAA);
-//  HalSpiAD7793Disable();
- a = AD7793_COMM_READ | AD7793_COMM_ADDR(AD7793_REG_DATA);
- b = AD7793_MODE_SEL(AD7793_MODE_SINGLE) >> 8;
- c = AD7793_MODE_RATE(AD7793_FLRAT_62);
- HalSpiWriteReadByte(0x40);
-//  HalSpiAD7793Enable();
- // HalSpiWriteReadByte(0x78);
-  a = HalSpiWriteReadByte(DUMMY_BYTE);
-  b = HalSpiWriteReadByte(DUMMY_BYTE);
-  c = HalSpiWriteReadByte(DUMMY_BYTE);
-  e = HalSpiWriteReadByte(DUMMY_BYTE);
-  while(HalSpiWriteReadByte(DUMMY_BYTE)!=0xFF)
-  {
-    d++;
-  }
-  while(HalSpiWriteReadByte(DUMMY_BYTE)==0xFF);
   HalSpiAD7793Disable();
 }
 
