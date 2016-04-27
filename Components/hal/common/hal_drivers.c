@@ -170,7 +170,7 @@ void HalDriverInit (void)
  
   /* RTC DS1302 */
 #if (defined HAL_RTC_DS1302) && (HAL_RTC_DS1302 == TRUE)
-  //HalRTCInit();
+  HalRTCInit();
 #endif
   
   /* LED */

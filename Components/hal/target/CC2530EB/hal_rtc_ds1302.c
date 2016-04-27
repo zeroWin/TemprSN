@@ -118,7 +118,7 @@ uint8 HalBCD2Decimal(uint8 BCD);
 uint8 HalDecimal2BCD(uint8 decimal);
 
 void HalRTCDS1302Work(uint8 DS1302Enable);
-
+bool HalRTCDS1302OK(void);
 #if (defined HAL_OLED) && (HAL_OLED == TRUE)
   //do nothing
 #else
@@ -169,11 +169,19 @@ void HalRTCInit(void)
   //set port dir and power low
   DS1302_CE_OUT(); 
   DS1302_SCLK_OUT();
-  DS1302_IO_OUT();
+  DS1302_IO_OUT();  
   
-
-  /* Start DS1302 work */
-  HalRTCDS1302Work(RTC_DS1302_CLK_ENABLE);
+  if(HalRTCDS1302OK() == FALSE)
+  {
+    /* Setting DS1302 default time */
+    /* 2016-4-26 00:00:00 ÖÜ¶þ */
+    RTCStruct_t RTCStruct;
+    HalRTCStructInit(&RTCStruct,0,0,0,1,5,2,16);
+    HalRTCGetOrSetFull(RTC_DS1302_SET,&RTCStruct);
+    
+    /* Start DS1302 work */
+    HalRTCDS1302Work(RTC_DS1302_CLK_ENABLE);
+  }
 }
  
 
@@ -674,6 +682,23 @@ uint8 HalBCD2Decimal(uint8 BCD)
 
   return decimal;
 }
+
+
+/**************************************************************************************************
+ * @fn      HalRTCDS1302Work
+ *
+ * @brief   Control DS1302 clk enable or disable by set CH on register sec bit7
+ *
+ * @param   True is OK,flase is lose power,need configuration.
+ *
+ * @return  
+ **************************************************************************************************/
+bool HalRTCDS1302OK(void)
+{
+  uint8 CH = HalRTCSingleRead(RTC_R_SEC)&0x80;
+  return (CH == 0x80)?FALSE:TRUE;
+}
+
 
 #if (defined HAL_OLED) && (HAL_OLED == TRUE)
   //do nothing
