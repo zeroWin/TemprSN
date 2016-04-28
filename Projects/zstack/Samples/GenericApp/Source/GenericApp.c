@@ -104,7 +104,7 @@ const cId_t GenericApp_InClusterList[GENERICAPP_IN_CLUSTERS] =
 const cId_t GenericApp_OutClusterList[GENERICAPP_OUT_CLUSTERS] =
 {
   GENERICAPP_CLUSTERID,
-  GENERICAPP_CLUSTERID_SYNC_OVER,
+  GENETICAPP_CLUSTERID_TEMPR_SYNC_OVER,
   GENERICAPP_CLUSTERID_TEMPR_RESULT
 };
 
@@ -180,6 +180,7 @@ real32 CalWorkEndTemp(real32 fWorkEndDegree, real32 fColdEndDegree);
 
 void GenericApp_HandleNetworkStatus( devStates_t GenericApp_NwkStateTemp);
 void GenericApp_LeaveNetwork( void );
+void GenericApp_SyncData(void);
 /*********************************************************************
  * NETWORK LAYER CALLBACKS
  */
@@ -358,6 +359,18 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
     return (events ^ GENERICAPP_DO_MEAS_TEMPR);
   }  
   
+  // SYNC DATA
+  if (events &  GENERICAPP_TEMPR_SYNC)
+  {
+    // start temperature measurement.
+    if(TemprSystemStatus == TEMPR_SYNC_DATA) // 只有同步状态才同步
+      GenericApp_SyncData();
+    else // 搜寻网络或其他状态
+      HalExtFlashLoseNetwork();
+    
+    return (events ^  GENERICAPP_TEMPR_SYNC);
+  } 
+ 
   // Discard unknown events
   return 0;
 }
@@ -530,19 +543,27 @@ void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
       WPRINTSTR( pkt->cmd.Data );
 #endif
       HalOledShowString(20,0,16,(uint8 *)pkt->cmd.Data);
-      HalOledShowString(20,15,16,"V0.03");
+      HalOledShowString(20,15,16,"V0.04");
       HalOledRefreshGram();
       
       break;
     case GENERICAPP_CLUSTERID_START:
+      if(TemprSystemStatus == TEMPR_ONLINE_IDLE)
+      {
         TemprSystemStatus = TEMPR_ONLINE_MEASURE;
         
         GenericApp_MeasTemprInit();
         // to start from PT volt sampling
         osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);    
+      }
       break;
       
     case GENERICAPP_CLUSTERID_SYNC:
+      if(TemprSystemStatus == TEMPR_ONLINE_IDLE)
+      {
+        TemprSystemStatus = TEMPR_SYNC_DATA;
+        osal_set_event(GenericApp_TaskID, GENERICAPP_TEMPR_SYNC);
+      }
       break;
   }
 }
@@ -919,6 +940,48 @@ void GenericApp_LeaveNetwork( void )
   leaveReq.silent = FALSE;
 
   NLME_LeaveReq( &leaveReq );
+}
+
+
+/*********************************************************************
+ * @fn      GenericApp_SyncData
+ *
+ * @brief   Sync data.同步的状态机设计
+ *
+ * @param  
+ *
+ * @return  
+ *
+ */
+void GenericApp_SyncData(void)
+{
+  ExtFlashStruct_t ExtFlashStruct;
+  if(HalExtFlashDataRead(&ExtFlashStruct) == DATA_READ_EFFECTIVE) // 数据有效
+  {
+    // 发送数据
+    AF_DataRequest( &GenericApp_DstAddr, &GenericApp_epDesc,
+                   GENERICAPP_CLUSTERID_TEMPR_RESULT,
+                   TEMPR_RESULT_BYTE_PER_PACKET,
+                   (uint8 *)&ExtFlashStruct,
+                   &GenericApp_TransID,
+                   AF_DISCV_ROUTE, AF_DEFAULT_RADIUS );    
+    // 再次启动事件
+    osal_start_timerEx( GenericApp_TaskID,
+                      GENERICAPP_TEMPR_SYNC,
+                      GENERICAPP_SEND_SYNC_DATA_TIMEOUT );
+  }
+  else // 数据无效
+  {
+    // 切换状态
+    TemprSystemStatus = TEMPR_ONLINE_IDLE;
+    // 发送停止标志
+    AF_DataRequest( &GenericApp_DstAddr, &GenericApp_epDesc,
+                   GENETICAPP_CLUSTERID_TEMPR_SYNC_OVER,
+                   0,
+                   NULL,
+                   &GenericApp_TransID,
+                   AF_DISCV_ROUTE, AF_DEFAULT_RADIUS );
+  }
 }
 /*********************************************************************
 *********************************************************************/
