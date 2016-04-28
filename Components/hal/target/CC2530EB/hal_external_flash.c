@@ -864,6 +864,24 @@ void HalExtFlashReset(void)
   // 写入初始长度
   HalExtFlashDataLenWrite(sectorWriteEnd,sectorWritePos);  
 }
+
+
+/**************************************************************************************************
+ * @fn      HalExtFlashLoseNetwork
+ *
+ * @brief   Handle when lose network
+ *
+ * @param   
+ *
+ * @return  
+ **************************************************************************************************/
+void HalExtFlashLoseNetwork(void)
+{
+  // 将读取写入地址复位
+  HalExtFlashDataLenRead(&sectorWriteEnd,&sectorWritePos);
+  sectorReadEnd = sectorWriteEnd;
+  sectorReadPos = sectorWritePos;  
+}
 #else
 
 void HalExtFlashInit(void);
@@ -878,4 +896,5 @@ void HalExtFlashBufferWrite(uint8* writebuffer,uint32 writeAddress,uint16 writeL
 void HalExtFlashDataWrite(ExtFlashStruct_t ExtFlashStruct);
 uint8 HalExtFlashDataRead(ExtFlashStruct_t *ExtFlashStruct);
 void HalExtFlashReset(void);
+void HalExtFlashLoseNetwork(void);
 #endif /* HAL_EXTERNAL_FLASH */

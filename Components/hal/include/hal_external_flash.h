@@ -130,6 +130,12 @@ extern uint8 HalExtFlashDataRead(ExtFlashStruct_t *ExtFlashStruct);
  */
 extern void HalExtFlashReset(void);
 
+/*
+ * FLASH for lose network when SYNC
+ */
+extern void HalExtFlashLoseNetwork(void);
+
+
 #ifdef __cplusplus
 }
 #endif  
