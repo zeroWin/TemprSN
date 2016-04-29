@@ -94,8 +94,12 @@
    [1]0 1 2 3 ... 127	
    [2]0 1 2 3 ... 127	
    [3]0 1 2 3 ... 127
+   [4]0 1 2 3 ... 127
+   [5]0 1 2 3 ... 127
+   [6]0 1 2 3 ... 127
+   [7]0 1 2 3 ... 127
 */
-unsigned char OLED_GRAM[128][4];
+unsigned char OLED_GRAM[128][8];
 
 /**************************************************************************************************
  *                                        FUNCTIONS - Local
@@ -144,7 +148,7 @@ void HalOledInit(void)
   writec(0x80);
 
   writec(0xA8); 
-  writec(0x1F); 
+  writec(0x3F); 
 
   writec(0xD3);
   writec(0x00);
@@ -159,7 +163,7 @@ void HalOledInit(void)
   writec(0xC8);   //C8h, X[3]=1b: remapped mode. Scan from COM[31] to COM0
 
   writec(0xDA);
-  writec(0x02);
+  writec(0x12);
 
   writec(0x81);
   writec(0x8F);
@@ -184,7 +188,7 @@ void HalOledInit(void)
 
   writec(0x22);    //Setup page start and end address
   writec(0x00);	   //A[2:0] : Page start Address, range : 0-7d, (RESET=0d)
-  writec(0x03);    //B[2:0] : Page end Address, range : 0-7d, (RESET = 7d)
+  writec(0x07);    //B[2:0] : Page end Address, range : 0-7d, (RESET = 7d)
 	 
   writec(0xAF);    //display on
   HalOledClear();
@@ -203,7 +207,7 @@ void HalOledInit(void)
 void HalOledDrawPoint(uint8 x,uint8 y,uint8 t)
 {
   uint8 pos,bx,temp=0;
-  if(x>127||y>31)return;//超出范围了.
+  if(x>127||y>63)return;//超出范围了.
   pos=y/8;
   bx=y%8;
   temp=1<<(bx);
@@ -226,42 +230,50 @@ void HalOledShowChar(uint8 x,uint8 y,uint8 chr,uint8 size,uint8 mode)
   uint8 temp,t,t1;
   uint8 y0=y;
   chr=chr-' ';//得到偏移后的值
-  if(size == 32)
-  {      //四点模式(32x16)，将字幕中的一个点，扩充成4个点
-    for(t=0;t<16;t++)   //调用1608字体，每个字符16byte
-    {   
-      temp=oled_asc2_1608[chr][t];		 //调用1608字体 ,每次Load一个byte，含自上到下，8个point	                          
+  if(size == 64)
+  {
+    for(t=0;t<140;t++)
+    {
+      temp = oled_testing_point[t]; //调用20X56大小的"-"
       for(t1=0;t1<8;t1++)
       {
-        if(temp&0x80)
-        {
-          HalOledDrawPoint(x,y,mode);	//(x,y),(x,y+1),(x+1,y),(x+1,y+1) 画四个点
-          HalOledDrawPoint(x,y+1,mode);
-          HalOledDrawPoint(x+1,y,mode);
-          HalOledDrawPoint(x+1,y+1,mode);
-        }
-        else
-        {
-          HalOledDrawPoint(x,y,!mode);	//(x,y),(x,y+1),(x+1,y),(x+1,y+1) 画四个点
-          HalOledDrawPoint(x,y+1,!mode);
-          HalOledDrawPoint(x+1,y,!mode);
-          HalOledDrawPoint(x+1,y+1,!mode);
-        }
+        if(temp&0x80)HalOledDrawPoint(x,y,mode);
+        else HalOledDrawPoint(x,y,!mode);
         temp<<=1;
-        y=y+2;
-        if((y-y0)==32)
+        y++;
+        if((y-y0)==56)
         {
           y=y0;
-          x=x+2;
+          x++;
+          break;
+        }
+      }  	 
+    }
+  }
+  else if(size == 32)
+  {    
+    for(t=0;t<112;t++)
+    {
+      temp = oled_asc3_3216[chr][t]; //调用16X56字体
+      for(t1=0;t1<8;t1++)
+      {
+        if(temp&0x80)HalOledDrawPoint(x,y,mode);
+        else HalOledDrawPoint(x,y,!mode);
+        temp<<=1;
+        y++;
+        if((y-y0)==56)
+        {
+          y=y0;
+          x++;
           break;
         }
       }  	 
     }
   }
   else
-  {	   //单点模式			   
+  {//单点模式			   
     for(t=0;t<size;t++)
-    {
+    {   
       if(size==12)temp=oled_asc2_1206[chr][t];  //调用1206字体
       else temp=oled_asc2_1608[chr][t];		 //调用1608字体 ,每次Load一个byte，含自上到下，8个point	                          
       for(t1=0;t1<8;t1++)
@@ -278,7 +290,7 @@ void HalOledShowChar(uint8 x,uint8 y,uint8 chr,uint8 size,uint8 mode)
         }
       }  	 
     }
-  }            
+  }          
 }
 
 
@@ -324,13 +336,14 @@ void HalOledShowNum(uint8 x,uint8 y,uint32 num,uint8 len,uint8 size)
 void HalOledShowString(uint8 x,uint8 y,uint8 size,const uint8 *p)
 {
 #define MAX_CHAR_POSX 122
-#define MAX_CHAR_POSY 22    
+#define MAX_CHAR_POSY 58    
   while(*p!='\0')
   {       
     if(x>MAX_CHAR_POSX){x=0;y+=16;}
     if(y>MAX_CHAR_POSY){y=x=0;HalOledClear();}
     HalOledShowChar(x,y,*p,size,1);	 
-    x+=size/2;
+    if(size == 64) x += 16;
+    else x+=size/2;
     p++;
   } 
 } 
@@ -381,7 +394,7 @@ void HalOledRefreshGram(void)
   I2C_O(0x40);
   I2C_Ack();  
   
-  for(i=0;i<4;i++)  
+  for(i=0;i<8;i++)  
   {    
     for(n=0;n<128;n++)
     {
@@ -406,7 +419,7 @@ void HalOledRefreshGram(void)
 void HalOledClear(void) 
 {
   uint8 i,n;  
-  for(i=0;i<4;i++)for(n=0;n<128;n++)OLED_GRAM[n][i]=0X00;  
+  for(i=0;i<8;i++)for(n=0;n<128;n++)OLED_GRAM[n][i]=0X00;  
   HalOledRefreshGram();//更新显示  
 }
 
@@ -594,6 +607,7 @@ uint32 oled_pow(uint8 m,uint8 n)
 	return result;
 }	
 
+
 void HalOledDisp_2p2(real32 data)
 {
   uint8 t[4];
@@ -621,6 +635,72 @@ void HalOledDisp_2p2(real32 data)
   } 
   HalOledRefreshGram();
 }
+
+
+/***************************************************************************************************
+ * @fn      HalOledShowDegreeSymbol
+ *
+ * @brief   显示摄氏度符号
+ *
+ * @param   
+ *
+ * @return  none
+ ***************************************************************************************************/
+void HalOledShowDegreeSymbol(uint8 x,uint8 y)
+{
+     uint8 temp,t,t1;
+     uint8 y0=y;
+     for(t=0;t<80;t++)
+     {
+       temp = oled_degree_symbol[t]; //调用20X32字体
+       for(t1=0;t1<8;t1++)
+       {
+         if(temp&0x80)HalOledDrawPoint(x,y,1);
+         else HalOledDrawPoint(x,y,0);
+         temp<<=1;
+         y++;
+         if((y-y0)==32)
+         {
+           y=y0;
+           x++;
+           break;
+         }
+       }  	
+     }
+}
+
+
+/***************************************************************************************************
+ * @fn      HalOledShowPowerSymbol
+ *
+ * @brief   显示电量符号
+ *
+ * @param   
+ *
+ * @return  none
+ ***************************************************************************************************/
+void HalOledShowPowerSymbol(uint8 x,uint8 y,uint8 mode,uint8 power_num)
+{
+     uint8 temp,t,t1;
+     uint8 y0=y;
+     for(t=0;t<48;t++)
+     {
+       temp = oled_power_symbol[power_num][t]; //oled_power_symbol图标 power_num越小电量越低，10为最大100%,0最小0%
+       for(t1=0;t1<8;t1++)
+       {
+         if(temp&0x80)HalOledDrawPoint(x,y,mode);
+         else HalOledDrawPoint(x,y,!mode);
+         temp<<=1;
+         y++;
+         if((y-y0)==12)
+         {
+           y=y0;
+           x++;
+           break;
+         }
+       }  	
+     } 
+}
 #else
 void HalOledRefreshGram(void);
 void HalOledOnOff(uint8 mode);
@@ -630,4 +710,7 @@ void HalOledClear(void);
 void HalOledShowChar(uint8 x,uint8 y,uint8 chr,uint8 size,uint8 mode);
 void HalOledShowNum(uint8 x,uint8 y,uint32 num,uint8 len,uint8 size);
 void HalOledShowString(uint8 x,uint8 y,uint8 size,const uint8 *p);
+
+void HalOledShowDegreeSymbol(uint8 x,uint8 y);
+void HalOledShowPowerSymbol(uint8 x,uint8 y,uint8 mode,uint8 power_num);
 #endif /* HAL_OLED */

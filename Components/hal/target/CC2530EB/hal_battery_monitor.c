@@ -146,7 +146,7 @@ uint8 HalShowBattVol(uint8 fThreshold)
   static float fThreshold_temp;
   float fBattV;
   
-  if(fThreshold == 1)//测量
+  if(fThreshold == BATTERY_MEASURE_SHOW)//测量
   {
      fBattV = HalGetBattVol();
      fThreshold_temp = fBattV;
@@ -155,52 +155,52 @@ uint8 HalShowBattVol(uint8 fThreshold)
   if(fThreshold_temp >= 4.000)
   {
     HalOledShowString(72,0,12,"100%");
-    //OLED_ShowPowerSymbol(100,0,1,10);  //100%
+    HalOledShowPowerSymbol(100,0,1,10);  //100%
   }
   else if(fThreshold_temp >= 3.900)
   {
     HalOledShowString(72,0,12," 90%");
-    //OLED_ShowPowerSymbol(100,0,1,9);  //90%
+    HalOledShowPowerSymbol(100,0,1,9);  //90%
   }
   else if(fThreshold_temp >= 3.800)
   {
     HalOledShowString(72,0,12," 80%");
-    //OLED_ShowPowerSymbol(100,0,1,8);   //80%
+    HalOledShowPowerSymbol(100,0,1,8);   //80%
   }
   else if(fThreshold_temp >= 3.700)
   {
     HalOledShowString(72,0,12," 70%");
-    //OLED_ShowPowerSymbol(100,0,1,7);   //70%
+    HalOledShowPowerSymbol(100,0,1,7);   //70%
   }
   else if(fThreshold_temp >= 3.600)
   {
     HalOledShowString(72,0,12," 60%");
-    //OLED_ShowPowerSymbol(100,0,1,6);   //60%
+    HalOledShowPowerSymbol(100,0,1,6);   //60%
   }
   else if(fThreshold_temp >= 3.500)
   {
     HalOledShowString(72,0,12," 50%");
-    //OLED_ShowPowerSymbol(100,0,1,5);   //50%
+    HalOledShowPowerSymbol(100,0,1,5);   //50%
   }
   else if(fThreshold_temp >= 3.400)
   {
     HalOledShowString(72,0,12," 40%");
-    //OLED_ShowPowerSymbol(100,0,1,4);   //40%
+    HalOledShowPowerSymbol(100,0,1,4);   //40%
   }
   else if(fThreshold_temp >= 3.300)
   {
     HalOledShowString(72,0,12," 30%");
-    //OLED_ShowPowerSymbol(100,0,1,3);   //30%
+    HalOledShowPowerSymbol(100,0,1,3);   //30%
   }
   else if(fThreshold_temp >= 3.200)
   {
     HalOledShowString(72,0,12," 20%");
-    //OLED_ShowPowerSymbol(100,0,1,2);   //20%
+    HalOledShowPowerSymbol(100,0,1,2);   //20%
   }
   else if(fThreshold_temp >= 3.100)
   {
     HalOledShowString(72,0,12," 10%");
-    //OLED_ShowPowerSymbol(100,0,1,1);  //10%---警告电量，屏幕只显示LowPower
+    HalOledShowPowerSymbol(100,0,1,1);  //10%---警告电量，屏幕只显示LowPower
     return 1;
   }
   else
