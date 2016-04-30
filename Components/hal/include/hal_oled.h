@@ -103,14 +103,17 @@ extern void HalOledOnOff(uint8 mode);
  */
 extern void halMcuWaitUs(uint16 microSecs); 
 
-//在LCD上显示一个小于100、保留2位小数的浮点数
-extern void HalOledDisp_2p2(real32 data);
 
-//在OLED上显示摄氏度符号
+/*
+ * 在OLED上显示摄氏度符号
+ */
 extern void HalOledShowDegreeSymbol(uint8 x,uint8 y);
 
-//在OLED上显示电量符号
+/*
+ * 在OLED上显示电量符号
+ */
 extern void HalOledShowPowerSymbol(uint8 x,uint8 y,uint8 mode,uint8 power_num);
+
 
 #ifdef __cplusplus
 }

@@ -90,6 +90,29 @@ extern "C"
 
 /* packet */
 #define TEMPR_RESULT_BYTE_PER_PACKET     12
+  
+  
+/* OLED show coordinates*/
+#define TEMPR_RESULT_X          10
+#define TEMPR_RESULT_Y          8
+#define TEMPR_RESULT_SIZE       32
+#define TEMPR_RESULT_DEFAULT    "88.88"
+  
+#define TEMPR_SYMBOL_X          98
+#define TEMPR_SYMBOL_Y          25   
+  
+#define DEVICE_INFO_X               10
+#define DEVICE_INFO_Y               0
+#define DEVICE_INFO_SIZE            12
+#define DEVICE_INFO_ONLINE_IDLE     "On-Ready "
+#define DEVICE_INFO_OFFLINE_IDLE    "Off-Ready"
+#define DEIVCE_INFO_ONLINE_MEASURE  "On-Meas  "
+#define DEVICE_INFO_OFFLINE_MEASURE "Off-Meas "
+#define DEVICE_INFO_FIND_NWK        "Find-NWK "
+#define DEVICE_INFO_CLOSING         "Closing  "
+#define DEVICE_INFO_ERROR           "Error    "
+#define DEVICE_INFO_SYNC_DATA       "Sync-data"
+  
 /*********************************************************************
  * MACROS
  */

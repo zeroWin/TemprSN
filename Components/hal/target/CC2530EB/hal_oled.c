@@ -608,33 +608,7 @@ uint32 oled_pow(uint8 m,uint8 n)
 }	
 
 
-void HalOledDisp_2p2(real32 data)
-{
-  uint8 t[4];
-  uint32 aa;
-  aa = (uint32) (data*100);           //保留3位小数
-  HalOledClear();
-  if ((data >= 0.0) && (data < 100.0))
-  {
-    t[0]= aa/1000 ;        //分别获取各位上的数
-    t[1]= aa%1000/100 ;
-    t[2]= aa%100/10 ;
-    t[3]= aa%10;
-      //LCD_DISP(t[0],t[1],t[2],t[3],1,0); 
-    //void OLED_ShowNum(uint8 x,uint8 y,uint32 num,uint8 len,uint8 size)
-   
-    HalOledShowNum(0,0,t[0],1,32); //十位  
-    HalOledShowNum(16,0,t[1],1,32); //个位
-    HalOledShowChar(32,0,'.',32,1); 
-    HalOledShowNum(48,0,t[2],1,32); //.1位
-    HalOledShowNum(64,0,t[3],1,32); //.01位
-  }
-  else
-  {
-    HalOledShowString(0,0,16,"Hi");
-  } 
-  HalOledRefreshGram();
-}
+
 
 
 /***************************************************************************************************

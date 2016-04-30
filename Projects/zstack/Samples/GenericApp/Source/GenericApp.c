@@ -181,6 +181,8 @@ real32 CalWorkEndTemp(real32 fWorkEndDegree, real32 fColdEndDegree);
 void GenericApp_HandleNetworkStatus( devStates_t GenericApp_NwkStateTemp);
 void GenericApp_LeaveNetwork( void );
 void GenericApp_SyncData(void);
+void HalOledDispStaDurMeas(real32 data,TemprSystemStatus_t deviceStatus);
+void HalOledDispTempr(real32 data);
 /*********************************************************************
  * NETWORK LAYER CALLBACKS
  */
@@ -236,7 +238,14 @@ void GenericApp_Init( byte task_id )
 #if defined ( LCD_SUPPORTED )
     HalLcdWriteString( "GenericApp", HAL_LCD_LINE_1 );
 #endif
-  HalOledShowString(0,0,32,"OFF-IDLE");
+  
+  // init OLED show
+  HalOledShowString(TEMPR_RESULT_X,TEMPR_RESULT_Y,
+                    TEMPR_RESULT_SIZE,TEMPR_RESULT_DEFAULT);
+  HalOledShowDegreeSymbol(TEMPR_SYMBOL_X,TEMPR_SYMBOL_Y); //显示摄氏度符号
+  HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                  DEVICE_INFO_SIZE,DEVICE_INFO_OFFLINE_IDLE);
+  HalShowBattVol(BATTERY_MEASURE_SHOW);
   HalOledRefreshGram();
   
   ZDO_RegisterForZDOMsg( GenericApp_TaskID, End_Device_Bind_rsp );
@@ -353,8 +362,19 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
   // handle meas tempr event
   if (events & GENERICAPP_DO_MEAS_TEMPR)
   {
-    // start temperature measurement.
-    GenericApp_DoMeasTempr();
+    if(TemprSystemStatus == TEMPR_FIND_NETWORK) // 在线测量过程中突然断网
+    { 
+      // stop measure
+      HalOledShowString(TEMPR_RESULT_X,TEMPR_RESULT_Y,
+                        TEMPR_RESULT_SIZE,TEMPR_RESULT_DEFAULT);
+      HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                        DEVICE_INFO_SIZE,DEVICE_INFO_FIND_NWK);
+      HalShowBattVol(BATTERY_NO_MEASURE_SHOW);
+      HalOledRefreshGram();      
+      
+    }
+    else // start temperature measurement.
+      GenericApp_DoMeasTempr();
     
     return (events ^ GENERICAPP_DO_MEAS_TEMPR);
   }  
@@ -464,7 +484,8 @@ void GenericApp_HandleKeys( byte shift, byte keys )
         GenericApp_LeaveNetwork(); 
         TemprSystemStatus = TEMPR_CLOSE;
        
-        HalOledShowString(0,0,32,"CLOSE");
+        HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                          DEVICE_INFO_SIZE,DEVICE_INFO_CLOSING);
         HalOledRefreshGram();
       }
       break;
@@ -475,7 +496,8 @@ void GenericApp_HandleKeys( byte shift, byte keys )
         ZDApp_StopJoiningCycle();
         TemprSystemStatus = TEMPR_OFFLINE_IDLE;
         
-        HalOledShowString(0,0,32,"OFF-IDLE");
+        HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                          DEVICE_INFO_SIZE,DEVICE_INFO_OFFLINE_IDLE);
         HalOledRefreshGram();
       }
       break;
@@ -542,9 +564,6 @@ void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
 #elif defined( WIN32 )
       WPRINTSTR( pkt->cmd.Data );
 #endif
-      HalOledShowString(20,0,16,(uint8 *)pkt->cmd.Data);
-      HalOledShowString(20,15,16,"V0.04");
-      HalOledRefreshGram();
       
       break;
     case GENERICAPP_CLUSTERID_START:
@@ -716,12 +735,18 @@ void GenericApp_DoMeasTempr(void)
   bool isValidRlt = FALSE;
   bool isStableRlt = FALSE;
   
-
+  static uint8 num_point = 1;
+  
   isValidRlt = measWorkEndTemperature(&measRltArray[retryNumOfMeasTempr]);
   
-  HalOledDisp_2p2(measRltArray[retryNumOfMeasTempr].fWorkEndDegree);
-  
-
+  switch(num_point)
+  {
+    case 1:HalOledShowString(10,8,64,"-");HalOledShowString(30,8,64,"-");HalOledShowString(50,8,64,"-");HalOledShowString(70,8,64,"-");num_point++;break;
+    case 2:HalOledShowString(10,8,32,"     ");num_point=1;break;
+  }
+  HalOledDispStaDurMeas(measRltArray[retryNumOfMeasTempr].fWorkEndDegree,TemprSystemStatus);
+  HalShowBattVol(BATTERY_NO_MEASURE_SHOW);
+  HalOledRefreshGram();
   if (isValidRlt == FALSE)
   { // once get the invalid result, to stop and quit.
     isComplete = TRUE;
@@ -819,8 +844,9 @@ void MeasTemprComplete(real32 fOutputDegree, real32 fColdEndDegree, bool isStabl
   else // 稳定,进行状态切换
   {
     // 显示稳定温度
-    HalOledDisp_2p2(OneRltStore.fTempDegree);
-    
+    HalOledDispTempr(OneRltStore.fTempDegree);
+    HalShowBattVol(BATTERY_MEASURE_SHOW);
+        
     ExtFlashStruct_t ExtFlashStruct;
     HalRTCGetOrSetFull(RTC_DS1302_GET,&ExtFlashStruct.RTCStruct);
     // 先存低位
@@ -834,6 +860,13 @@ void MeasTemprComplete(real32 fOutputDegree, real32 fColdEndDegree, bool isStabl
     if(TemprSystemStatus == TEMPR_ONLINE_MEASURE) // 在线状态发送数据
     {
       TemprSystemStatus = TEMPR_ONLINE_IDLE;
+      HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                        DEVICE_INFO_SIZE,DEVICE_INFO_ONLINE_IDLE);
+      
+      // 如何测量结果错误，直接返回，不发送
+      if((OneRltStore.fTempDegree >= 0.0) && (OneRltStore.fTempDegree < 100.0))
+        return;
+      
       // 发送
       AF_DataRequest( &GenericApp_DstAddr, &GenericApp_epDesc,
                        GENERICAPP_CLUSTERID_TEMPR_RESULT,
@@ -846,9 +879,18 @@ void MeasTemprComplete(real32 fOutputDegree, real32 fColdEndDegree, bool isStabl
     if(TemprSystemStatus == TEMPR_OFFLINE_MEASURE) // 离线状态存储数据
     {
       TemprSystemStatus = TEMPR_OFFLINE_IDLE;
+      HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                          DEVICE_INFO_SIZE,DEVICE_INFO_OFFLINE_IDLE);
+      
+      // 如何测量结果错误，直接返回，不存储
+      if((OneRltStore.fTempDegree >= 0.0) && (OneRltStore.fTempDegree < 100.0))
+        return;      
+      
       // 存储 写入flash
       HalExtFlashDataWrite(ExtFlashStruct);
     }
+    
+    HalOledRefreshGram();
   }
   #endif
   
@@ -902,7 +944,8 @@ void GenericApp_HandleNetworkStatus( devStates_t GenericApp_NwkStateTemp)
   if( GenericApp_NwkStateTemp == DEV_END_DEVICE) //connect to GW
   {
       TemprSystemStatus = TEMPR_ONLINE_IDLE;
-      HalOledShowString(0,0,32,"ON-IDLE");
+      HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                          DEVICE_INFO_SIZE,DEVICE_INFO_ONLINE_IDLE);
   }
   else if( TemprSystemStatus != TEMPR_OFFLINE_IDLE) // Find network -- 1.coordinate lose 2.first connect to coordinate 
   { // 关闭搜索后，可能由于OSAL的timer事件设置，再进入一次ZDO_STATE_CHANGE，上面的判断就是为了排除这种情况
@@ -911,7 +954,8 @@ void GenericApp_HandleNetworkStatus( devStates_t GenericApp_NwkStateTemp)
     }
     
     TemprSystemStatus = TEMPR_FIND_NETWORK;
-    HalOledShowString(0,0,32,"FIND-NWK");     
+    HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                      DEVICE_INFO_SIZE,DEVICE_INFO_FIND_NWK);         
   }
     
   HalOledRefreshGram();
@@ -958,6 +1002,10 @@ void GenericApp_SyncData(void)
   ExtFlashStruct_t ExtFlashStruct;
   if(HalExtFlashDataRead(&ExtFlashStruct) == DATA_READ_EFFECTIVE) // 数据有效
   {
+    // 显示同步状态
+    HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                      DEVICE_INFO_SIZE,DEVICE_INFO_SYNC_DATA);
+    
     // 发送数据
     AF_DataRequest( &GenericApp_DstAddr, &GenericApp_epDesc,
                    GENERICAPP_CLUSTERID_TEMPR_RESULT,
@@ -965,15 +1013,19 @@ void GenericApp_SyncData(void)
                    (uint8 *)&ExtFlashStruct,
                    &GenericApp_TransID,
                    AF_DISCV_ROUTE, AF_DEFAULT_RADIUS );    
-    // 再次启动事件
+    
+    // 再次启动事件，1s后
     osal_start_timerEx( GenericApp_TaskID,
                       GENERICAPP_TEMPR_SYNC,
                       GENERICAPP_SEND_SYNC_DATA_TIMEOUT );
   }
   else // 数据无效
   {
-    // 切换状态
+    // 切换状态并显示
     TemprSystemStatus = TEMPR_ONLINE_IDLE;
+    HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                      DEVICE_INFO_SIZE,DEVICE_INFO_ONLINE_IDLE);
+    
     // 发送停止标志
     AF_DataRequest( &GenericApp_DstAddr, &GenericApp_epDesc,
                    GENETICAPP_CLUSTERID_TEMPR_SYNC_OVER,
@@ -981,6 +1033,86 @@ void GenericApp_SyncData(void)
                    NULL,
                    &GenericApp_TransID,
                    AF_DISCV_ROUTE, AF_DEFAULT_RADIUS );
+  }
+  
+  HalOledRefreshGram();
+}
+
+
+/*********************************************************************
+ * @fn      HalOledDispStaDurMeas
+ *
+ * @brief   测量过程显示状态栏
+ *
+ * @param  
+ *
+ * @return  
+ *
+ */
+void HalOledDispStaDurMeas(real32 data,TemprSystemStatus_t deviceStatus)
+{
+  switch(deviceStatus)
+  {
+    case TEMPR_ONLINE_MEASURE:
+    {
+      if((data >= 0.0) && (data < 100.0))
+          HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                            DEVICE_INFO_SIZE,DEIVCE_INFO_ONLINE_MEASURE);
+      else
+          HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                            DEVICE_INFO_SIZE,DEVICE_INFO_ERROR);
+    }
+    break;
+    
+    case TEMPR_OFFLINE_MEASURE:
+    {
+      if((data >= 0.0) && (data < 100.0))
+          HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                            DEVICE_INFO_SIZE,DEVICE_INFO_OFFLINE_MEASURE);
+      else
+          HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
+                            DEVICE_INFO_SIZE,DEVICE_INFO_ERROR);
+    }
+    break;
+    
+    default:break;
+  }
+}
+
+
+/*********************************************************************
+ * @fn      HalOledDispStaDurMeas
+ *
+ * @brief   HalOledDispTempr
+ *
+ * @param  
+ *
+ * @return  
+ *
+ */
+void HalOledDispTempr(real32 data)
+{
+  uint8 t[4];
+  uint32 aa;
+  aa = (uint32) (data*100);           //保留3位小数
+  
+  if ((data >= 0.0) && (data < 100.0))
+  {
+    t[0]= aa/1000 ;        //分别获取各位上的数
+    t[1]= aa%1000/100 ;
+    t[2]= aa%100/10 ;
+    t[3]= aa%10;
+
+    HalOledShowNum(10,8,t[0],1,32); //十位  
+    HalOledShowNum(26,8,t[1],1,32); //个位
+    HalOledShowChar(42,8,'.',32,1); 
+    HalOledShowNum(58,8,t[2],1,32); //.1位
+    HalOledShowNum(74,8,t[3],1,32); //.01位
+  }
+  else
+  {
+    HalOledShowString(TEMPR_RESULT_X,TEMPR_RESULT_Y,
+                    TEMPR_RESULT_SIZE,TEMPR_RESULT_DEFAULT);
   }
 }
 /*********************************************************************
