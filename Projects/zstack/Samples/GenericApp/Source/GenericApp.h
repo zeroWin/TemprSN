@@ -136,6 +136,11 @@ typedef union
   real32 floatData;
   uint8 byteData[4];
 } floatAndByteConv_t;
+
+/*********************************************************************
+ * GLOBAL VARIABLES
+ */
+extern TemprSystemStatus_t TemprSystemStatus;
 /*********************************************************************
  * FUNCTIONS
  */

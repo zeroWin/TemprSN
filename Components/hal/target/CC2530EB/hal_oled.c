@@ -582,11 +582,15 @@ void HalOledOnOff(uint8 mode)
 {
   if(mode == HAL_OLED_MODE_ON)
   {
-    writec(0xAF);    //display on
+    writec(0X8D);  //SET DCDC
+    writec(0X14);  //DCDC ON
+    writec(0XAF);  //DISPLAY ON
   }
   else
   {
-    writec(0xAE);    //display off 
+    writec(0X8D);  //SET DCDC
+    writec(0X10);  //DCDC OFF
+    writec(0XAE);  //DISPLAY OFF
   }
 }
 

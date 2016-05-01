@@ -24,7 +24,7 @@
   its documentation for any purpose.
 
   YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
-  PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  PROVIDED “AS IS?WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
   INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
   NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
   TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -51,6 +51,8 @@
 #include "OSAL_Memory.h"
 #include "OSAL_PwrMgr.h"
 #include "OSAL_Clock.h"
+#include "GenericApp.h"
+#include "hal_oled.h"
 
 #include "OnBoard.h"
 
@@ -84,6 +86,7 @@ osal_msg_q_t osal_qHead;
 /*********************************************************************
  * EXTERNAL VARIABLES
  */
+TemprLowPower_t TemprLowPower;
 
 /*********************************************************************
  * EXTERNAL FUNCTIONS
@@ -1044,7 +1047,9 @@ void osal_start_system( void )
 void osal_run_system( void )
 {
   uint8 idx = 0;
-
+  static uint32 time_for1 = 0;
+  static uint32 time_for2 = 0;
+  
   osalTimeUpdate();
   Hal_ProcessPoll();
 
@@ -1060,6 +1065,9 @@ void osal_run_system( void )
     uint16 events;
     halIntState_t intState;
 
+    time_for1 = 0;
+    time_for2 = 0;
+    
     HAL_ENTER_CRITICAL_SECTION(intState);
     events = tasksEvents[idx];
     tasksEvents[idx] = 0;  // Clear the Events for this task.
@@ -1076,7 +1084,23 @@ void osal_run_system( void )
 #if defined( POWER_SAVING )
   else  // Complete pass through all task events with no activity?
   {
-    osal_pwrmgr_powerconserve();  // Put the processor/system into sleep
+    if(time_for1<500)
+    {
+      if(time_for2 < 600)
+        time_for2++;
+      else
+      {
+        time_for2 = 0;
+        time_for1++;
+      }
+    }
+    else
+    {
+      // Ê±¼äµ½,ÔÚÑ°ÕÒÍøÂç»òÕßÊÇÔÚÏß×´Ì¬²»¿ÉÄÜ½øÈëµÍ¹¦ºÄ     
+      HalOledOnOff(HAL_OLED_MODE_OFF);
+      TemprLowPower = TEMPR_LOW_POWER;
+      osal_pwrmgr_powerconserve();  // Put the processor/system into sleep
+    }
   }
 #endif
 

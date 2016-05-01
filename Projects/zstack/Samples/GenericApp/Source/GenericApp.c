@@ -234,11 +234,15 @@ void GenericApp_Init( byte task_id )
   
   // Init system status 
   TemprSystemStatus = TEMPR_OFFLINE_IDLE;
+  
+  // Init Low power status
+  TemprLowPower = TEMPR_WORK;
+  
   // Update the display
 #if defined ( LCD_SUPPORTED )
     HalLcdWriteString( "GenericApp", HAL_LCD_LINE_1 );
 #endif
-  
+    
   // init OLED show
   HalOledShowString(TEMPR_RESULT_X,TEMPR_RESULT_Y,
                     TEMPR_RESULT_SIZE,TEMPR_RESULT_DEFAULT);
@@ -465,6 +469,15 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
  */
 void GenericApp_HandleKeys( byte shift, byte keys )
 {
+  if(TemprLowPower == TEMPR_LOW_POWER) // 处于低功耗状态
+  {
+    HalOledOnOff(HAL_OLED_MODE_ON);
+    HalShowBattVol(BATTERY_MEASURE_SHOW); 
+    HalOledRefreshGram();
+    TemprLowPower = TEMPR_WORK;
+    return;
+  }
+  
   if(keys & HAL_KEY_SW_6) // Link key
   {
     switch(TemprSystemStatus)
@@ -486,7 +499,6 @@ void GenericApp_HandleKeys( byte shift, byte keys )
        
         HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
                           DEVICE_INFO_SIZE,DEVICE_INFO_CLOSING);
-        HalOledRefreshGram();
       }
       break;
       
@@ -498,7 +510,6 @@ void GenericApp_HandleKeys( byte shift, byte keys )
         
         HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
                           DEVICE_INFO_SIZE,DEVICE_INFO_OFFLINE_IDLE);
-        HalOledRefreshGram();
       }
       break;
       default:// Online , Offline measure , closing , SYNC
@@ -863,8 +874,9 @@ void MeasTemprComplete(real32 fOutputDegree, real32 fColdEndDegree, bool isStabl
       HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
                         DEVICE_INFO_SIZE,DEVICE_INFO_ONLINE_IDLE);
       
+      HalOledRefreshGram();
       // 如何测量结果错误，直接返回，不发送
-      if((OneRltStore.fTempDegree >= 0.0) && (OneRltStore.fTempDegree < 100.0))
+      if((OneRltStore.fTempDegree < 0.0) || (OneRltStore.fTempDegree >= 100.0))
         return;
       
       // 发送
@@ -882,15 +894,14 @@ void MeasTemprComplete(real32 fOutputDegree, real32 fColdEndDegree, bool isStabl
       HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
                           DEVICE_INFO_SIZE,DEVICE_INFO_OFFLINE_IDLE);
       
+      HalOledRefreshGram();
       // 如何测量结果错误，直接返回，不存储
-      if((OneRltStore.fTempDegree >= 0.0) && (OneRltStore.fTempDegree < 100.0))
+      if((OneRltStore.fTempDegree < 0.0) || (OneRltStore.fTempDegree >= 100.0))
         return;      
       
       // 存储 写入flash
       HalExtFlashDataWrite(ExtFlashStruct);
     }
-    
-    HalOledRefreshGram();
   }
   #endif
   

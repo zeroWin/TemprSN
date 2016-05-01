@@ -2398,7 +2398,7 @@
           <state>xLCD_SUPPORTED=DEBUG</state>
           <state>HAL_UART=FALSE</state>
           <state>HOLD_AUTO_START</state>
-          <state>xPOWER_SAVING</state>
+          <state>POWER_SAVING</state>
           <state>GO_TO_STABLE=TRUE</state>
           <state>SLOW_MEAS=TRUE</state>
         </option>
