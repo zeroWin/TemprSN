@@ -1084,6 +1084,7 @@ void osal_run_system( void )
 #if defined( POWER_SAVING )
   else  // Complete pass through all task events with no activity?
   {
+    
     if(time_for1<500)
     {
       if(time_for2 < 600)
@@ -1093,11 +1094,13 @@ void osal_run_system( void )
         time_for2 = 0;
         time_for1++;
       }
+      
+      if(time_for1 == 500)
+        HalOledOnOff(HAL_OLED_MODE_OFF);
     }
     else
     {
       // 时间到,在寻找网络或者是在线状态不可能进入低功耗     
-      HalOledOnOff(HAL_OLED_MODE_OFF);
       TemprLowPower = TEMPR_LOW_POWER;
       osal_pwrmgr_powerconserve();  // Put the processor/system into sleep
     }
