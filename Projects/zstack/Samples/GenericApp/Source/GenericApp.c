@@ -104,7 +104,7 @@ const cId_t GenericApp_InClusterList[GENERICAPP_IN_CLUSTERS] =
 const cId_t GenericApp_OutClusterList[GENERICAPP_OUT_CLUSTERS] =
 {
   GENERICAPP_CLUSTERID,
-  GENETICAPP_CLUSTERID_TEMPR_SYNC_OVER,
+  GENERICAPP_CLUSTERID_TEMPR_SYNC_OVER,
   GENERICAPP_CLUSTERID_TEMPR_RESULT
 };
 
@@ -1039,7 +1039,7 @@ void GenericApp_SyncData(void)
     
     // ∑¢ÀÕÕ£÷π±Í÷æ
     AF_DataRequest( &GenericApp_DstAddr, &GenericApp_epDesc,
-                   GENETICAPP_CLUSTERID_TEMPR_SYNC_OVER,
+                   GENERICAPP_CLUSTERID_TEMPR_SYNC_OVER,
                    0,
                    NULL,
                    &GenericApp_TransID,
