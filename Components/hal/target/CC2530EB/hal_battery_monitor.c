@@ -152,52 +152,52 @@ uint8 HalShowBattVol(uint8 fThreshold)
      fThreshold_temp = fBattV;
   }
   
-  if(fThreshold_temp >= 4.000)
+  if(fThreshold_temp >= 4.177)
   {
     HalOledShowString(72,0,12,"100%");
     HalOledShowPowerSymbol(100,0,1,10);  //100%
   }
-  else if(fThreshold_temp >= 3.900)
+  else if(fThreshold_temp >= 4.050)
   {
     HalOledShowString(72,0,12," 90%");
     HalOledShowPowerSymbol(100,0,1,9);  //90%
   }
-  else if(fThreshold_temp >= 3.800)
+  else if(fThreshold_temp >= 4.000)
   {
     HalOledShowString(72,0,12," 80%");
     HalOledShowPowerSymbol(100,0,1,8);   //80%
   }
-  else if(fThreshold_temp >= 3.700)
+  else if(fThreshold_temp >= 3.900)
   {
     HalOledShowString(72,0,12," 70%");
     HalOledShowPowerSymbol(100,0,1,7);   //70%
   }
-  else if(fThreshold_temp >= 3.600)
+  else if(fThreshold_temp >= 3.850)
   {
     HalOledShowString(72,0,12," 60%");
     HalOledShowPowerSymbol(100,0,1,6);   //60%
   }
-  else if(fThreshold_temp >= 3.500)
+  else if(fThreshold_temp >= 3.800)
   {
     HalOledShowString(72,0,12," 50%");
     HalOledShowPowerSymbol(100,0,1,5);   //50%
   }
-  else if(fThreshold_temp >= 3.400)
+  else if(fThreshold_temp >= 3.799)
   {
     HalOledShowString(72,0,12," 40%");
     HalOledShowPowerSymbol(100,0,1,4);   //40%
   }
-  else if(fThreshold_temp >= 3.300)
+  else if(fThreshold_temp >= 3.777)
   {
     HalOledShowString(72,0,12," 30%");
     HalOledShowPowerSymbol(100,0,1,3);   //30%
   }
-  else if(fThreshold_temp >= 3.200)
+  else if(fThreshold_temp >= 3.722)
   {
     HalOledShowString(72,0,12," 20%");
     HalOledShowPowerSymbol(100,0,1,2);   //20%
   }
-  else if(fThreshold_temp >= 3.100)
+  else if(fThreshold_temp >= 3.687)
   {
     HalOledShowString(72,0,12," 10%");
     HalOledShowPowerSymbol(100,0,1,1);  //10%---警告电量，屏幕只显示LowPower
