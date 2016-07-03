@@ -250,7 +250,7 @@ void GenericApp_Init( byte task_id )
   HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
                   DEVICE_INFO_SIZE,DEVICE_INFO_OFFLINE_IDLE);
   HalShowBattVol(BATTERY_MEASURE_SHOW);
-  HalOledRefreshGram();
+  
   
   ZDO_RegisterForZDOMsg( GenericApp_TaskID, End_Device_Bind_rsp );
   ZDO_RegisterForZDOMsg( GenericApp_TaskID, Match_Desc_rsp );
@@ -374,7 +374,7 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
       HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
                         DEVICE_INFO_SIZE,DEVICE_INFO_FIND_NWK);
       HalShowBattVol(BATTERY_NO_MEASURE_SHOW);
-      HalOledRefreshGram();      
+            
       
     }
     else // start temperature measurement.
@@ -473,7 +473,7 @@ void GenericApp_HandleKeys( byte shift, byte keys )
   {
     HalOledOnOff(HAL_OLED_MODE_ON);
     HalShowBattVol(BATTERY_MEASURE_SHOW); 
-    HalOledRefreshGram();
+    
     TemprLowPower = TEMPR_WORK;
     return;
   }
@@ -526,6 +526,8 @@ void GenericApp_HandleKeys( byte shift, byte keys )
         TemprSystemStatus = TEMPR_ONLINE_MEASURE;
         
         GenericApp_MeasTemprInit();
+        // 清空原来数字
+        HalOledShowString(10,8,32,"     ");
         // to start from PT volt sampling
         osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);
       }
@@ -536,6 +538,8 @@ void GenericApp_HandleKeys( byte shift, byte keys )
         TemprSystemStatus = TEMPR_OFFLINE_MEASURE;
         
         GenericApp_MeasTemprInit();
+        // 清空原来数字
+        HalOledShowString(10,8,32,"     ");
         // to start from PT volt sampling
         osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);
       }
@@ -546,7 +550,7 @@ void GenericApp_HandleKeys( byte shift, byte keys )
     
   }
 
-  HalOledRefreshGram();
+  
 }
 
 /*********************************************************************
@@ -583,6 +587,8 @@ void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
         TemprSystemStatus = TEMPR_ONLINE_MEASURE;
         
         GenericApp_MeasTemprInit();
+        // 清空原来数字
+        HalOledShowString(10,8,32,"     ");
         // to start from PT volt sampling
         osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);    
       }
@@ -752,12 +758,12 @@ void GenericApp_DoMeasTempr(void)
   
   switch(num_point)
   {
-    case 1:HalOledShowString(10,8,64,"-");HalOledShowString(30,8,64,"-");HalOledShowString(50,8,64,"-");HalOledShowString(70,8,64,"-");num_point++;break;
-    case 2:HalOledShowString(10,8,32,"     ");num_point=1;break;
+    case 1:HalOledShowString(10,32,64,"-");HalOledShowString(30,32,64,"-");HalOledShowString(50,32,64,"-");HalOledShowString(70,32,64,"-");num_point++;break;
+    case 2:HalOledShowString(10,32,64," ");HalOledShowString(30,32,64," ");HalOledShowString(50,32,64," ");HalOledShowString(70,32,64," ");num_point=1;break;
   }
   HalOledDispStaDurMeas(measRltArray[retryNumOfMeasTempr].fWorkEndDegree,TemprSystemStatus);
   HalShowBattVol(BATTERY_NO_MEASURE_SHOW);
-  HalOledRefreshGram();
+  
   if (isValidRlt == FALSE)
   { // once get the invalid result, to stop and quit.
     isComplete = TRUE;
@@ -874,7 +880,7 @@ void MeasTemprComplete(real32 fOutputDegree, real32 fColdEndDegree, bool isStabl
       HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
                         DEVICE_INFO_SIZE,DEVICE_INFO_ONLINE_IDLE);
       
-      HalOledRefreshGram();
+      
       // 如何测量结果错误，直接返回，不发送
       if((OneRltStore.fTempDegree < 0.0) || (OneRltStore.fTempDegree >= 100.0))
         return;
@@ -894,7 +900,7 @@ void MeasTemprComplete(real32 fOutputDegree, real32 fColdEndDegree, bool isStabl
       HalOledShowString(DEVICE_INFO_X,DEVICE_INFO_Y,
                           DEVICE_INFO_SIZE,DEVICE_INFO_OFFLINE_IDLE);
       
-      HalOledRefreshGram();
+      
       // 如何测量结果错误，直接返回，不存储
       if((OneRltStore.fTempDegree < 0.0) || (OneRltStore.fTempDegree >= 100.0))
         return;      
@@ -969,7 +975,7 @@ void GenericApp_HandleNetworkStatus( devStates_t GenericApp_NwkStateTemp)
                       DEVICE_INFO_SIZE,DEVICE_INFO_FIND_NWK);         
   }
     
-  HalOledRefreshGram();
+  
   
 }
 
@@ -1046,7 +1052,7 @@ void GenericApp_SyncData(void)
                    AF_DISCV_ROUTE, AF_DEFAULT_RADIUS );
   }
   
-  HalOledRefreshGram();
+  
 }
 
 

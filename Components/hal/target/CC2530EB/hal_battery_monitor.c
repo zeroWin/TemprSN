@@ -182,7 +182,7 @@ uint8 HalShowBattVol(uint8 fThreshold)
     HalOledShowString(72,0,12," 50%");
     HalOledShowPowerSymbol(100,0,1,5);   //50%
   }
-  else if(fThreshold_temp >= 3.799)
+  else if(fThreshold_temp >= 3.785)
   {
     HalOledShowString(72,0,12," 40%");
     HalOledShowPowerSymbol(100,0,1,4);   //40%
