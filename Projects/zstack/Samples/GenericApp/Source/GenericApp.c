@@ -527,7 +527,7 @@ void GenericApp_HandleKeys( byte shift, byte keys )
         
         GenericApp_MeasTemprInit();
         // 清空原来数字
-        HalOledShowString(10,8,32,"     ");
+        HalOledShowString(10,16,32,"     ");
         // to start from PT volt sampling
         osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);
       }
@@ -539,7 +539,7 @@ void GenericApp_HandleKeys( byte shift, byte keys )
         
         GenericApp_MeasTemprInit();
         // 清空原来数字
-        HalOledShowString(10,8,32,"     ");
+        HalOledShowString(10,16,32,"     ");
         // to start from PT volt sampling
         osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);
       }
@@ -588,7 +588,7 @@ void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
         
         GenericApp_MeasTemprInit();
         // 清空原来数字
-        HalOledShowString(10,8,32,"     ");
+        HalOledShowString(10,16,32,"     ");
         // to start from PT volt sampling
         osal_set_event(GenericApp_TaskID, GENERICAPP_PT_VOLT_SAMPLE);    
       }
@@ -1120,11 +1120,11 @@ void HalOledDispTempr(real32 data)
     t[2]= aa%100/10 ;
     t[3]= aa%10;
 
-    HalOledShowNum(10,8,t[0],1,32); //十位  
-    HalOledShowNum(26,8,t[1],1,32); //个位
-    HalOledShowChar(42,8,'.',32,1); 
-    HalOledShowNum(58,8,t[2],1,32); //.1位
-    HalOledShowNum(74,8,t[3],1,32); //.01位
+    HalOledShowNum(10,16,t[0],1,32); //十位  
+    HalOledShowNum(26,16,t[1],1,32); //个位
+    HalOledShowChar(42,16,'.',32,1); 
+    HalOledShowNum(58,16,t[2],1,32); //.1位
+    HalOledShowNum(74,16,t[3],1,32); //.01位
   }
   else
   {

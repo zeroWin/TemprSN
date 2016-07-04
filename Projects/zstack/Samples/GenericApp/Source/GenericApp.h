@@ -98,7 +98,7 @@ extern "C"
   
 /* OLED show coordinates*/
 #define TEMPR_RESULT_X          10
-#define TEMPR_RESULT_Y          8
+#define TEMPR_RESULT_Y          16
 #define TEMPR_RESULT_SIZE       32
 #define TEMPR_RESULT_DEFAULT    "88.88"
   

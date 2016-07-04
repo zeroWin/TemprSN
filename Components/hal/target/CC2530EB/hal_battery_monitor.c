@@ -206,7 +206,7 @@ uint8 HalShowBattVol(uint8 fThreshold)
   else
   {
     HalOledShowString(72,0,12,"  0%");
-    //OLED_ShowPowerSymbol(100,0,1,0);  //0%---ÆÁÄ»ºÚÆÁ
+    HalOledShowPowerSymbol(100,0,1,0);  //0%---ÆÁÄ»ºÚÆÁ
     return 2;
   }
   return 0;

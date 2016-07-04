@@ -238,7 +238,7 @@ void HalOledShowChar(uint8 x,uint8 y,uint8 chr,uint8 size,uint8 mode)
     I2C_O(0x40);
     I2C_Ack();  
     
-    for(t=0;t<112;++t)
+    for(t=0;t<96;++t)
     {
       temp = oled_asc3_3216[chr][t]; //调用16X56字体
       I2C_O(temp);
@@ -248,7 +248,7 @@ void HalOledShowChar(uint8 x,uint8 y,uint8 chr,uint8 size,uint8 mode)
       {
         I2C_Stop();
         x0 = x;
-        if(t != 111)
+        if(t != 95)
         {
           ++y0;
           // 设置开始位置
